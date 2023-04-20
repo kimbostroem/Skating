@@ -74,11 +74,7 @@ if isfield(Data,'Force') && ~isempty(Data.Force)
     % Sign of the force: when the flag is 1, we have Ground Action forces, if 0, we have Ground
     % Reaction forces (in the latter case, multiply by -1). In the wording by QTM: "Coordinate system 
     % in which force data is expressed: 0 (local force plate coordinates), 1 (global coordinate system)"
-    if isfield(Data.Force, 'ForcePlateOrientation')
-        Sign = [Data.Force.ForcePlateOrientation] * 2 - 1;
-    else
-        Sign = ones(size(Data.Force));
-    end
+    Sign     = [Data.Force.ForcePlateOrientation] * 2 - 1;
     ForcePlateCounter = 0;
     for ForceElement = 1:length(IsForcePlate)
         if IsForcePlate(ForceElement) == true
