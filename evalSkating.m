@@ -50,28 +50,29 @@ for iObs = 1:nObs
    nPlates = size(Forces, 1);
    nDims = size(Forces, 2);
    nSamples = size(Forces, 3);
-   Loaded = false(size(Forces, 1), 1);
    Force = zeros(3, nSamples);
    COP = zeros(3, nSamples);
    Time = (0:nSamples-1)/Frequency;
-   for iPlate = 1:nPlates
-       if min(Forces(iPlate, 3, :), [], 'all') < -LoadThresh0
-       % if Loaded(plate)
-           % Loaded(plate) = true;
-           Force_filt   = squeeze(Forces(iPlate, :, :));
-           COP_filt   = squeeze(COPs(iPlate, :, :));
-           % % 50 Hz Netzbrumm entfernen
-           % for iDim = 1:nDims
-           %     Force_filt(iDim, :) = periodicMedianFilter(Force_filt(iDim, :), HumPeriod);
-           %     COP_filt(iDim, :) = periodicMedianFilter(COP_filt(iDim, :), HumPeriod);
-           % end
-           % Glaetten
-           % Force_filt = nanfilth(CutoffFrequency, Frequency, 2, Force_filt, 'l', 2);
-           Force    = Force + Force_filt;
-           % COP_filt = nanfilth(CutoffFrequency, Frequency, 2, COP_filt, 'l', 2);
-           COP    = COP + COP_filt;
-       end
-   end
+   COP = squeeze(sum(COPs, 1, 'omitnan'));
+   Force = squeeze(sum(Forces, 1, 'omitnan'));
+   % for iPlate = 1:nPlates
+   %     if min(Forces(iPlate, 3, :), [], 'all') < -LoadThresh0
+   %     % if Loaded(plate)
+   %         % Loaded(plate) = true;
+   %         % Force_filt   = squeeze(Forces(iPlate, :, :));
+   %         % COP_filt   = squeeze(COPs(iPlate, :, :));           
+   %         % % 50 Hz Netzbrumm entfernen
+   %         % for iDim = 1:nDims
+   %         %     Force_filt(iDim, :) = periodicMedianFilter(Force_filt(iDim, :), HumPeriod);
+   %         %     COP_filt(iDim, :) = periodicMedianFilter(COP_filt(iDim, :), HumPeriod);
+   %         % end
+   %         % Glaetten
+   %         % Force_filt = nanfilth(CutoffFrequency, Frequency, 2, Force_filt, 'l', 2);
+   %         Force    = Force + Force_filt;
+   %         % COP_filt = nanfilth(CutoffFrequency, Frequency, 2, COP_filt, 'l', 2);
+   %         COP    = COP + COP_filt;
+   %     end
+   % end
    Force = -Force; % force -> reaction force
    % COP = [-COP(1, :); -COP(2, :); COP(3, :)]; % rotate 180° on XY-plane to improve readability (negative values -> positive)
 

@@ -2,8 +2,6 @@ function UserBody = extractBodyFromQUALSkel(SkelData)
 %% Estimate body segment lengths ("size") from Qualisys MAT file with Skeleton
 % The segment size is scaled to the bodyHeight and to the default nextPos (see defBody),
 % except for the pelvis. 
-% Pelvis : origin of the pelvis and the relative positions of hips and l5 are QTM-specific, and so
-% the nextPos is changed for the UserBody
 %
 % SYNTAX
 % estBody = extractBodyFromQUALSkel(SkelData,defBody)
@@ -22,19 +20,26 @@ function UserBody = extractBodyFromQUALSkel(SkelData)
 % Website: http://www.predimo.com
 % Author: Kim J Bostroem, Marc de Lussanet
 % Version 221230 (MdL) comment
+% Version 230418 (MdL) removed the calculations for nexPos for hip and lumbar joints, for this
+% destroyes the muscle positions; correct scaling for the RBM and Pelvis segments (according to 
+% marker import (extractBodyFromSegments); correct scale factor
 
 %% init
 UserBody = struct;
 SkelSegData = SkelData.signals.joints;
 SkelSegNames = {SkelSegData.name};
+Y=2;
 
 %% Adapt conversion table
-srcType = 'qual_sports';
+SourceType = 'qual_sports';
 DefBody = loadBody('def_body');
+SizeDefault     = DefBody.segments.size; % default segment sizes
+NextPosDefault  = DefBody.segments.nextPos;
 ConversionTable = DefBody.conversion;
+SegmentNames    = DefBody.segments.name;
 % copy the Qualisys fields to the generic fields (for estimateBodyHeight)
-ConversionTable.srcName = ConversionTable.([srcType,'_name']);
-ConversionTable.srcOrientation = ConversionTable.(srcType);
+ConversionTable.srcName = ConversionTable.([SourceType,'_name']);
+ConversionTable.srcOrientation = ConversionTable.(SourceType);
 SkelJntNames = {SkelData.signals.joints.name};
 
 %% Calc body height
@@ -42,8 +47,7 @@ BodyHeight = estimateBodyHeight(ConversionTable, SkelSegData, SkelSegNames, DefB
 
 %% Calc segment sizes
 % init size array
-mySizes = nan(size(DefBody.segments.size));
-myNextPos = nan(size(DefBody.segments.nextPos));
+SegmentSizes = nan(size(DefBody.segments.size));
 for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
     JointId = DefBody.joints.id(JointNo);
     SegmentId = DefBody.joints.followerSegment(JointNo);
@@ -53,56 +57,39 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
     switch JointId
 
         case 21 % RBM_joint -> (same position and size as) pelvis
-            % The next joints of the hip joint are the lumbar joint and left/right hip joints.
-            SkelThis1No  = strcmp(thisNames{1}, SkelJntNames);
-            PelvisId      = 20;
-            PelvisNo      = DefBody.segments.id == PelvisId;
-            nextJoints    = DefBody.joints.id(DefBody.joints.baseSegment==20); % lumbar joint, left/right hip joint, L5_S1_joint (latter not needed)
-            followerJoint = nextJoints(1); % lumbar joint
-            followerNames = strsplit(ConversionTable.srcName{ConversionTable.id == followerJoint},';'); % 3 lumbar source joints
-            LumbarNo      = strcmp(followerNames{1}, SkelJntNames);
-            rHipName      = ConversionTable.srcName{ConversionTable.id == nextJoints(2)};
-            lHipName      = ConversionTable.srcName{ConversionTable.id == nextJoints(3)};
-            rHipNo        = strcmp(rHipName, SkelJntNames);
-            lHipNo        = strcmp(lHipName, SkelJntNames);
-            % position and orientation of the pelvis
-            PelvisBase    = SkelData.signals.joints(SkelThis1No).dynamic.pos.data(1,:); % first sample
-            PelvisRot     = SkelData.signals.joints(SkelThis1No).dynamic.rot.data(1,:,:); % rotation matrix
-            % initialize PelvisSize to default
-            PelvisSize    = DefBody.segments.size(SegmentNo);
-            % if the legs are defined, calculate the hip positions and the segment length
-            if any(rHipNo) && any(lHipNo)
-                % position of the hips in global coordinates (at first sample)
-                LeftHip  = SkelData.signals.joints(lHipNo).dynamic.pos.data(1,:); % first sample
-                RightHip = SkelData.signals.joints(rHipNo).dynamic.pos.data(1,:); % first sample
-                % pelvis size in [m]
-                HipWidth = vecnorm(LeftHip - RightHip); % distance between left and right hip
-                % normalize the segment length to the body height
-                PelvisSize = HipWidth / BodyHeight;
-                % The X(front) and Z(rostral) with respect to the pelvis coordinate system
-                % get the position in local coordinates
-                pelvisCS       = zeros(4,3);
-                pelvisCS(1:3,:)= reshape(PelvisRot,[3 3]);
-                pelvisCS(4,  :)= PelvisBase;
-                LHipLocal = getLocalPosOnSegment(pelvisCS,LeftHip,'invert');
-                RHipLocal = getLocalPosOnSegment(pelvisCS,RightHip,'invert');
-                % nextPos for left and right hip: recalculate these conform the skeleton definition
-                myNextPos(PelvisNo,2,:) = RHipLocal([2 1 3]); % offset right hip
-                myNextPos(PelvisNo,3,:) = LHipLocal([2 1 3]); % offset left hip
-            end
-            % calculate the lumbar joint
-            if any(LumbarNo)
-                LumbarPos = SkelData.signals.joints(LumbarNo).dynamic.pos.data(1,:); % first sample
-                LumbarVerticalOffset = vecnorm(PelvisBase - LumbarPos);
-                myNextPos(PelvisNo,1,:) = [0 0 LumbarVerticalOffset]; % offset L5
-            end
-            % the RBM and pelvis segments are welded together and have the same length. The RBM is a
-            % "mock-segment" with minimal mass, no gyr and no nextPos and the same position as the
-            % pelvis
-            mySizes(SegmentNo) = PelvisSize;
-            mySizes(PelvisId) = PelvisSize;
-            % normalize the nextPos to the pelvis size
-            myNextPos(PelvisId,:,:) = myNextPos(PelvisId,:,:) / (BodyHeight * PelvisSize);
+            % Pelvis (at mid-asi) and RBM (at mid-hip) have the same orientation and size
+            % the size is the "default asi distance" but scaled to the actual hip distance
+            PlvNo = startsWith(SegmentNames,'pelvis_');
+            RBMNo = startsWith(SegmentNames,'RBM_');
+            LFemurID = 27;
+            RFemurID = 26;
+            LHipNextNo = DefBody.segments.next(PlvNo,:) == LFemurID; % which entry of nextpos gives the left hip
+            RHipNextNo = DefBody.segments.next(PlvNo,:) == RFemurID; % which entry of nextpos gives the right hip
+            % pelvis default width scaled to the body height
+            PelvisWidthDefault = SizeDefault(PlvNo) * BodyHeight; % [m]
+            % The position of the hip joints is given by nextPos, expressed in the pelvis width
+            NormalizedLHipPosDefault = squeeze(NextPosDefault(PlvNo, LHipNextNo, :));
+            NormalizedRHipPosDefault = squeeze(NextPosDefault(PlvNo, RHipNextNo, :));
+            NormalizedHipWidthDefault = abs(NormalizedLHipPosDefault(Y) - NormalizedRHipPosDefault(Y));
+            HipDistanceDefault = PelvisWidthDefault * NormalizedHipWidthDefault;
+            LHipNo = matches({SkelData.signals.joints.name},'LeftUpLeg');
+            RHipNo = matches({SkelData.signals.joints.name},'RightUpLeg');
+            LHipPos = SkelData.signals.joints(LHipNo).dynamic.pos.data;
+            RHipPos = SkelData.signals.joints(RHipNo).dynamic.pos.data;
+            HipDistance = mean(vecnorm(LHipPos - RHipPos, 2,2),'omitnan');
+            
+            % Pelvis scaling factor in X
+            % PelvisScalingFactor_X = HipDistance / HipDistanceDefault;
+            % Pelvis scaling factor in Y
+            PelvisScalingFactor_Y = HipDistance / HipDistanceDefault;
+            % Pelvis scaling factor in Z
+            % PelvisScalingFactor_Z = HipDistance / HipDistanceDefault;
+            
+            PelvisScalingFactor = PelvisScalingFactor_Y;
+            PelvisWidth = PelvisWidthDefault * PelvisScalingFactor;
+            % set the sizes
+            SegmentSizes(PlvNo) = PelvisWidth / BodyHeight;
+            SegmentSizes(RBMNo) = PelvisWidth / BodyHeight;
 
         case 12 % lumbar joint -> thorax
             % The lumbar joint corresponds 3 subsequent joints in the Skeleton, named Spine, Spine1 and Spine2. The distance
@@ -122,41 +109,11 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
                     - SkelData.signals.joints(SkelThis3No).dynamic.pos.data(1,:)) + ...
                     vecnorm( SkelData.signals.joints(SkelThisEndNo).dynamic.pos.data(1,:)...
                     - SkelData.signals.joints(SkelCervId).dynamic.pos.data(1,:));
-                mySizes(SegmentNo) = Length;
+                SegmentSizes(SegmentNo) = Length;
                 % ignore the nextpos translations from defBody
                 nextPosZ = abs(DefBody.segments.nextPos(SegmentNo,1,3));
                 % normalize the segment length to the body height
-                mySizes(SegmentNo) = mySizes(SegmentNo) / (BodyHeight * nextPosZ);
-            end
-
-        case {25,26,27,28,29,30,31} % cervical vertebra joints -> cervical vertebra
-            % The distance between the neck and head joint corresponds to the sum of the sizes of the 7 cervical vertebral
-            JointNames = strsplit(ConversionTable.srcName{ConversionTable.id == 1},';');
-            Skel1No  = strcmp(JointNames{1}, SkelJntNames);
-            Skel2No  = strcmp(JointNames{2}, SkelJntNames);
-            IsFlankerSegmentsDefined = any(Skel1No) && any(Skel2No);
-            if IsFlankerSegmentsDefined
-                % the length in [m]
-                mySizes(SegmentNo) = vecnorm(SkelData.signals.joints(Skel2No).dynamic.pos.data(1,:) - SkelData.signals.joints(Skel1No).dynamic.pos.data(1,:))/7; % first sample
-                % ignore the nextpos translations from defBody
-                nextPosZ = abs(DefBody.segments.nextPos(SegmentNo,1,3));
-                % normalize the segment length to the body height
-                mySizes(SegmentNo) = mySizes(SegmentNo) / (BodyHeight * nextPosZ);
-            end
-
-        case {33,34,35,36,37} % lumbar vertebra joints -> lumbar vertebra
-            % The distance between the 1st and 2nd lumbar source joint corresponds to the sum of the sizes of the 5 lumbar vertebral
-            JointNames = strsplit(ConversionTable.srcName{ConversionTable.id == 12},';');
-            Skel1No  = strcmp(JointNames{1}, SkelJntNames);
-            Skel2No  = strcmp(JointNames{2}, SkelJntNames);
-            IsFlankerSegmentsDefined = any(Skel1No) && any(Skel2No);
-            if IsFlankerSegmentsDefined
-                % the length in [m]
-                mySizes(SegmentNo) = vecnorm(SkelData.signals.joints(Skel2No).dynamic.pos.data(1,:) - SkelData.signals.joints(Skel1No).dynamic.pos.data(1,:))/5; % first sample
-                % ignore the nextpos translations from defBody
-                nextPosZ = abs(DefBody.segments.nextPos(SegmentNo,1,3));
-                % normalize the segment length to the body height
-                mySizes(SegmentNo) = mySizes(SegmentNo) / (BodyHeight * nextPosZ);
+                SegmentSizes(SegmentNo) = SegmentSizes(SegmentNo) / (BodyHeight * nextPosZ);
             end
 
         case {2,3} % right/left clavicle
@@ -168,7 +125,7 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
             IsFlankerSegmentsDefined = any(SkelThis1No) && any(SkelFollowNo);
             if IsFlankerSegmentsDefined
                 % the length in [m]
-                mySizes(SegmentNo) = vecnorm(...
+                SegmentSizes(SegmentNo) = vecnorm(...
                     SkelData.signals.joints(SkelFollowNo).dynamic.pos.data(1,:)...
                     - SkelData.signals.joints(SkelThis1No).dynamic.pos.data(1,:)); % first sample
                 % ignore the nextpos translations from defBody
@@ -179,7 +136,7 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
                 nextPosBaseY   = abs(DefBody.segments.nextPos(ThoraxSegment,2,2));
                 nextPosIgnore  = nextPosZ - nextPosBaseY;
                 % normalize the segment length to the body height
-                mySizes(SegmentNo) = mySizes(SegmentNo) / (BodyHeight * nextPosIgnore);
+                SegmentSizes(SegmentNo) = SegmentSizes(SegmentNo) / (BodyHeight * nextPosIgnore);
             end
 
         otherwise % all other joints
@@ -205,36 +162,32 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
             IsFlankerSegmentsDefined = any(FollowerNo) && any(SkelThis1No);
             if IsFlankerSegmentsDefined
                 % the length in [m]
-                mySizes(SegmentNo) = vecnorm(SkelData.signals.joints(FollowerNo).dynamic.pos.data(1,:) - SkelData.signals.joints(SkelThis1No).dynamic.pos.data(1,:));
+                SegmentSizes(SegmentNo) = vecnorm(SkelData.signals.joints(FollowerNo).dynamic.pos.data(1,:) - SkelData.signals.joints(SkelThis1No).dynamic.pos.data(1,:));
                 % scale size to the z-distance to next segment normalized to size
                 if all(~isnan(DefBody.segments.nextPos(SegmentNo,1,:))) % only if nextPos is defined
                     % ignore the nextpos translations from defBody
                     nextPosZ = abs(DefBody.segments.nextPos(SegmentNo,1,3));
                     % normalize the segment length to the body height
-                    mySizes(SegmentNo) = mySizes(SegmentNo) / (BodyHeight * nextPosZ);
+                    SegmentSizes(SegmentNo) = SegmentSizes(SegmentNo) / (BodyHeight * nextPosZ);
                 end
             end
     end
     % if the size is not defined, it's zero and should be set to NaN
-    if mySizes(SegmentNo) == 0
-        mySizes(SegmentNo) = NaN;
+    if SegmentSizes(SegmentNo) == 0
+        SegmentSizes(SegmentNo) = NaN;
     end
 end
 
 %% Post-process sizes
 % calc scaling factor to corresponding size in default body
-scales = nan(size(DefBody.segments.scale));
-for i = 1:length(scales)
-    scales(i) = mySizes(i) * BodyHeight / (DefBody.segments.size(i) * DefBody.general.height);
-end
+ScaleToDefault = SegmentSizes ./ SizeDefault;
 
 %% save into estimated body structure
 UserBody.general.height = BodyHeight;
 UserBody.segments.id = DefBody.segments.id;
 UserBody.segments.name = DefBody.segments.name;
-UserBody.segments.size = mySizes;
-UserBody.segments.nextPos = myNextPos;
-UserBody.segments.scale = scales;
+UserBody.segments.size = SegmentSizes;
+UserBody.segments.scale = ScaleToDefault;
 
 % % print the lengths and nextPos:
 % fprintf('%5s %25s %5s %5s  np: %6s %6s %6s xx %6s %6s %6s xx %6s %6s %6s\n', ...
@@ -245,9 +198,6 @@ UserBody.segments.scale = scales;
 %         fprintf('%5d %25s %5.2f %5.2f  np: %6.2f %6.2f %6.2f xx %6.2f %6.2f %6.2f xx %6.2f %6.2f %6.2f\n', ...
 %             Id, UserBody.segments.name{No}, ...
 %             UserBody.segments.size(No)*BodyHeight, UserBody.segments.scale(No), ...
-%             UserBody.segments.nextPos(No,1,1), UserBody.segments.nextPos(No,1,2), UserBody.segments.nextPos(No,1,3), ...
-%             UserBody.segments.nextPos(No,2,1), UserBody.segments.nextPos(No,2,2), UserBody.segments.nextPos(No,2,3), ...
-%             UserBody.segments.nextPos(No,3,1), UserBody.segments.nextPos(No,3,2), UserBody.segments.nextPos(No,3,3) ...
 %             );
 %     end
 % end
@@ -345,5 +295,6 @@ else
     warning('height could not be calculated from Skeleton. Using default value (%.2fm)', BodyHeight);
 end
 end
+
 
 

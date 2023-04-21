@@ -30,8 +30,9 @@ function [ Force, Frequency, COP, Moment, Location, Analog, ForceBoard ] = kraft
 % Author: Marc de Lussanet, WWU Muenster
 % Version 11, 220908 (DK, MdL) FIXED : overwritten Variable; init IsForcePlate as logical; replace
 % i,j with meaningfull variable names
-% Version 14, 230214 (MdL) more robust check for the sign of the force
+% Version 230214 (MdL) more robust check for the sign of the force
 % Version 230221 (MH) removed isMedianPositive Check
+% Version 230419 (MdL) check if field ForcePlateOrientation exists (in old files it may be absent)
 
 narginchk(1,3);
 if nargin < 2 || ~Scale || isempty(Scale),  Scale=1; end
@@ -74,7 +75,11 @@ if isfield(Data,'Force') && ~isempty(Data.Force)
     % Sign of the force: when the flag is 1, we have Ground Action forces, if 0, we have Ground
     % Reaction forces (in the latter case, multiply by -1). In the wording by QTM: "Coordinate system 
     % in which force data is expressed: 0 (local force plate coordinates), 1 (global coordinate system)"
-    Sign     = [Data.Force.ForcePlateOrientation] * 2 - 1;
+    if isfield(Data.Force,'ForcePlateOrientation')
+        Sign = [Data.Force.ForcePlateOrientation] * 2 - 1;
+    else % in old versions of QTM, this filed is not yet defined
+        Sign = ones(size(Data.Force));
+    end
     ForcePlateCounter = 0;
     for ForceElement = 1:length(IsForcePlate)
         if IsForcePlate(ForceElement) == true
