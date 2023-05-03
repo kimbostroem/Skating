@@ -33,11 +33,12 @@ function [ Force, Frequency, COP, Moment, Location, Analog, ForceBoard ] = kraft
 % Version 230214 (MdL) more robust check for the sign of the force
 % Version 230221 (MH) removed isMedianPositive Check
 % Version 230419 (MdL) check if field ForcePlateOrientation exists (in old files it may be absent)
+% Version 230421 (MdL) ignore extra analog channels
 
 narginchk(1,3);
 if nargin < 2 || ~Scale || isempty(Scale),  Scale=1; end
 if nargin < 3 || isempty(ForcePlateLabels)
-    ForcePlateLabels = {'Force-plate','Force plate','Force platform'};
+    ForcePlateLabels = {'Force-plate','Force plate','Force platform',''};
 end
 % check if force data are present
 IsForce   = 0;
@@ -134,7 +135,10 @@ if isfield(Data,'Analog') && isfield(Data.Analog,'BoardName')
         else
             continue;
         end
-        NPlatesInThisBoard = Data.Analog(BoardNo).NrOfChannels / NChannelsPerPlate;
+        % the number of channels is usually all information that is provided, but in some cases,
+        % extra information is saved on the same analog board. Ignore these additional channels by
+        % checking that the board cannot contain more plates than are present in the Forces section
+        NPlatesInThisBoard = min(NPlates, Data.Analog(BoardNo).NrOfChannels / NChannelsPerPlate);
         AnalogBrd = NaN(NPlatesInThisBoard,NChannelsPerPlate,NSamples);
         for ForceElement = 1:NPlatesInThisBoard
             AnalogBrd(ForceElement,:,:)  = Data.Analog(BoardNo).Data((ForceElement-1)*NPlatesInThisBoard+(1:NChannelsPerPlate),:);
