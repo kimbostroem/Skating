@@ -44,6 +44,7 @@ for iObs = 1:nObs
     nPlates = size(Forces, 1);
     nSamples = size(Forces, 3);
     LoadThresh = 20;
+    InitForce = 200;
     HumPeriod = Frequency/50;
     CutoffFrequency = 20;
     Time = (0:nSamples-1)/Frequency;
@@ -61,6 +62,15 @@ for iObs = 1:nObs
     absForces = abs(Forces(:, 3, :)); % z-component of force
     weightedCOPs = (absForces .* COPs) ./ sum(absForces, 1);
     COP = squeeze(sum(weightedCOPs, 1, 'omitnan'));
+
+    start = find(abs(Force(3,:))>InitForce, 1, 'first');
+    Force = Force(:, start:end);
+    stop = find(abs(Force(3,:))<InitForce, 1, 'first');
+    Force = Force(:, 1:stop);
+    COP = COP(:, start:stop+start-1);
+    Time = Time(start:stop+start-1);
+
+
     % remove non-contact phases
     idxContact = ~any(COP, 1);
     COP(:, idxContact) = NaN; 
