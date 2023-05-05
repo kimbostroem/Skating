@@ -1,6 +1,12 @@
-doPlot = 1;
+% set input and output folder
 inDir = fullfile('..', 'Skating_In');
 outDir = fullfile('..', 'Skating_Out');
+
+% load library
+addpath(genpath('library'));
+
+% load table containing subjects info
+Subjects = readtable('Subjects.xlsx');
 
 % list content of input folder into cell array
 dirInfo = dir(inDir);
@@ -10,7 +16,7 @@ idxContact = startsWith(fnames', {'.', '~'}) | [dirInfo.isdir];
 fpaths = strcat(fdirs, filesep, fnames);
 fpaths(idxContact) = []; % remove folders and hidden files
 nObs = length(fpaths);
-nObs = 1;
+nObs = 2;
 observations = table;
 for iObs = 1:nObs
     observation = table;
@@ -43,8 +49,10 @@ for iObs = 1:nObs
     Forces = -Forces; % ground reaction forces are inverse of plate forces
     nPlates = size(Forces, 1);
     nSamples = size(Forces, 3);
-    LoadThresh = 20;
-    InitForce = 200;
+    dt = 1/Frequency; % time step size [s]
+    LoadThresh = 20; % threshold below which forces are set to zero [N]
+    InitForce = 200; % force threshold to cross to start trial [N]
+    InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
     HumPeriod = Frequency/50;
     CutoffFrequency = 20;
     Time = (0:nSamples-1)/Frequency;
@@ -63,29 +71,32 @@ for iObs = 1:nObs
     weightedCOPs = (absForces .* COPs) ./ sum(absForces, 1);
     COP = squeeze(sum(weightedCOPs, 1, 'omitnan'));
 
-    start = find(abs(Force(3,:))>InitForce, 1, 'first');
-    Force = Force(:, start:end);
-    stop = find(abs(Force(3,:))<InitForce, 1, 'first');
-    Force = Force(:, 1:stop);
-    COP = COP(:, start:stop+start-1);
-    Time = Time(start:stop+start-1);
+    iStart = find(abs(Force(3,:))>InitForce, 1, 'first');
+    iStart = iStart + floor(InitMarg/dt);
+    Force = Force(:, iStart:end);
+    iStop = find(abs(Force(3,:))>InitForce, 1, 'last');
+    iStop = iStop - floor(InitMarg/dt);
+    Force = Force(:, 1:iStop);
+    COP = COP(:, iStart:iStop+iStart-1);
+    nSamples = size(Force, 2);
+    Time = (0:nSamples-1)/Frequency;
 
 
     % remove non-contact phases
     idxContact = ~any(COP, 1);
-    COP(:, idxContact) = NaN; 
+    COP(:, idxContact) = NaN;
     idxContact = ~any(isnan(COP), 1);
     nSamplesContact = sum(idxContact);
 
     switch observation.task
         case 'Einbein'
         case 'Balance'
-            % path length            
+            % path length
             pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
             precision = pathLength;
             COPx = COP(1, idxContact);
             COPy = COP(2, idxContact);
-            coefficients = polyfit(COPx, COPy, 1);            
+            coefficients = polyfit(COPx, COPy, 1);
             yBeamFcn = @(x) polyval(coefficients, x);
             xFit = linspace(min(COPx), max(COPx), nSamplesContact);
             yFit = yBeamFcn(xFit);
@@ -97,55 +108,55 @@ for iObs = 1:nObs
     end
 
 
-    if doPlot
-        nRows = 4;
-        nCols = 1;
-        iPlot = 0;
-        fig = setupFigure(nCols*800, nRows*200, fname);
+    %% Plot data
+    
+    nRows = 4;
+    nCols = 1;
+    iPlot = 0;
+    fig = setupFigure(nCols*800, nRows*200, fname);
 
-        % plot COP path
-        iPlot = iPlot+1;        
-        subplot(nRows, nCols, iPlot);
-        scatter(COP(1, :), COP(2, :), 'bo');
-        title(sprintf('COP path of "%s"', fname), 'Interpreter', 'none');
-        xlabel('x [m]');
-        ylabel('y [m]');
-        hold on
-        scatter(COP(1, :), yBeamFcn(COP(1, :)), '.r');
-        axis equal
-        
-        % plot COP components
-        iPlot = iPlot+1;        
-        subplot(nRows, nCols, iPlot);
-        plot(Time', COP');
-        xlim([Time(1), Time(end)]);
-        title(sprintf('COP components'), 'Interpreter', 'none');
-        xlabel('Time [s]');
-        ylabel('Position [m]');
-        legend({'x', 'y', 'z'});
-        
-        % plot distance to beam
-        iPlot = iPlot+1;
-        subplot(nRows, nCols, iPlot);
-        plot(Time', beamDistFcn(COP(1, :), COP(2, :))');
-        xlim([Time(1), Time(end)]);
-        title(sprintf('Distance to beam'), 'Interpreter', 'none');
-        xlabel('Time [s]');
-        ylabel('Distance [m]');
+    % plot COP path
+    iPlot = iPlot+1;
+    subplot(nRows, nCols, iPlot);
+    scatter(COP(1, :), COP(2, :), 'bo');
+    title(sprintf('COP path of "%s"', fname), 'Interpreter', 'none');
+    xlabel('x [m]');
+    ylabel('y [m]');
+    hold on
+    scatter(COP(1, :), yBeamFcn(COP(1, :)), '.r');
+    axis equal
 
-        % plot GRF
-        iPlot = iPlot+1;
-        subplot(nRows, nCols, iPlot);
-        plot(Time', Force');
-        title(sprintf('Ground reaction force'), 'Interpreter', 'none');
-        legend({'x', 'y', 'z'});
-        xlabel('Time [s]');
-        ylabel('Force [N]');
-        xlim([Time(1), Time(end)]);
-        filePath = fullfile(outDir, fname);
-        saveFigure(fig, filePath, 'png');
-        close(fig);
-    end
+    % plot COP components
+    iPlot = iPlot+1;
+    subplot(nRows, nCols, iPlot);
+    plot(Time', COP');
+    xlim([Time(1), Time(end)]);
+    title(sprintf('COP components'), 'Interpreter', 'none');
+    xlabel('Time [s]');
+    ylabel('Position [m]');
+    legend({'x', 'y', 'z'});
+
+    % plot distance to beam
+    iPlot = iPlot+1;
+    subplot(nRows, nCols, iPlot);
+    plot(Time', beamDistFcn(COP(1, :), COP(2, :))');
+    xlim([Time(1), Time(end)]);
+    title(sprintf('Distance to beam'), 'Interpreter', 'none');
+    xlabel('Time [s]');
+    ylabel('Distance [m]');
+
+    % plot GRF
+    iPlot = iPlot+1;
+    subplot(nRows, nCols, iPlot);
+    plot(Time', Force');
+    title(sprintf('Ground reaction force'), 'Interpreter', 'none');
+    legend({'x', 'y', 'z'});
+    xlabel('Time [s]');
+    ylabel('Force [N]');
+    xlim([Time(1), Time(end)]);
+    filePath = fullfile(outDir, fname);
+    saveFigure(fig, filePath, 'png');
+    close(fig);
 
     observations = [observations; observation]; %#ok<AGROW>
 end
