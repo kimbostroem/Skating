@@ -1,12 +1,16 @@
 % set input and output folder
 inDir = '/Users/kbostroem/sciebo/Skating/Skating_In';
 outDir = '/Users/kbostroem/sciebo/Skating/Skating_Out';
+paramDir = '/Users/kbostroem/sciebo/Skating/Auswertung';
 
 % load library
 addpath(genpath('library'));
 
 % load table containing subjects info
-Subjects = readtable('Subjects.xlsx');
+Subjects = readtable(fullfile(paramDir, 'Subjects.xlsx'));
+
+% stages
+stages = {'I', 'II', 'III'};
 
 % list content of input folder into cell array
 dirInfo = dir(inDir);
@@ -17,59 +21,88 @@ fpaths = strcat(fdirs, filesep, fnames);
 fpaths(idxContact) = []; % remove folders and hidden files
 nObs = length(fpaths);
 % nObs = 2;
-observations = table;
+Observations = table;
 for iObs = 1:nObs
     observation = table;
     fpath = fpaths{iObs};
-    [~, fname, ~] = fileparts(fpath);
-    if contains(fname, 'ungueltig', 'IgnoreCase', true)
+    [~, fileName, ~] = fileparts(fpath);
+    if contains(fileName, 'ungueltig', 'IgnoreCase', true)
         continue
-    end
+    end   
 
-    parts = strsplit(fname, '_');
+    % split file name at underscores
+    parts = strsplit(fileName, '_');
 
-    % get subject name
-    switch parts{2}
-        case 'II'
-            subjectCode = [parts{1}, '_', parts{2}];
-            parts = parts(3:end);
-        case 'III'
-            subjectCode = [parts{1}, '_', parts{2}];
-            parts = parts(3:end);
-        otherwise
-            subjectCode = parts{1};
-            parts = parts(2:end);
-    end
-    subjectCodes = [Subjects.Code, Subjects.Code_post, Subjects.Code_final];
+    % subject identity and code
+    subjectName = parts{1};
+    subjectCode = [parts{1}, '_', parts{2}];
+    subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
     [row, col] = find(strcmp(subjectCodes, subjectCode));
-    if ~isempty(row)
-        switch col
-            case 1
-                subject = subjectCodes{row, 1};
-            case 2
-                subject = subjectCodes{row, 1};
-            case 3
-                subject = subjectCodes{row, 1};
+    if isempty(row)
+        warning('Subject code %s not found -> skipping', subjectCode);
+        continue
+    end    
+    observation.subjectName = string(subjectName); % store in observation
+    observation.subjectCode = string(subjectCode);
+
+    % stage
+    stageStr = parts{2};
+    stage = find(strcmp(stages, stageStr), 1, 'first');
+    observation.stage = stage; % store in observation    
+
+    % subject properties at time of measurement
+    subjectProps = {'Height', 'Weight', 'Age', 'Date'};
+    for iProp = 1:length(subjectProps)
+        myStage = stage;
+        while myStage > 0
+            propName = sprintf('%s_%s', subjectProps{iProp}, stages{myStage});
+            propValue = Subjects.(propName)(row);
+            if strcmp(subjectProps{iProp}, 'Date') || ~isnan(propValue)
+                observation.(lower(subjectProps{iProp})) = propValue;
+                break
+            end
+            myStage = myStage-1;
         end
-    else
-        warning('Subject %s not found -> skipping', subjectCode);
     end
 
-    % observation.subject = string(parts{1});
-    % observation.task = string(parts{2});
-    % observation.side = 'B';
-    % observation.time = 1;
-    % observation.trial = str2double(parts{end});
-    % if length(parts) > 3
-    %     if strcmp(parts{3}, 'Post')
-    %         observation.time = 2;
-    %         observation.side = parts{4};
-    %     else
-    %         observation.time = 1;
-    %         observation.side = string(parts{3});
-    %     end
-    % end
-    % 
+    % intervention    
+    [row, col] = find(contains(subjectCodes, subjectName));   
+    switch stageStr
+        case 'I'
+            intervention = 0;
+        case 'II'
+            if max(col) == 3 % subject has been tested at three stages
+                intervention = 0;
+            else
+                intervention = 1;
+            end
+        case 'III'
+            intervention = 1;
+    end
+    observation.intervention = intervention;
+
+    % task
+    task = parts{3};
+    observation.task = string(task);
+
+    % side or Kraft
+    if strcmp(parts{4}, 'Kraft')
+        isMarker = 0;
+        side = parts{5};
+        trial = parts{6};
+    else
+        isMarker = 1;
+        side = parts{4};
+        trial = parts{5};
+    end
+    observation.side = string(side);
+    observation.isMarker = isMarker;
+    observation.trial = trial;
+
+    % store file name in observation
+    observation.fileName = string(fileName);
+    
+    %
     % tmp = load(fpath);
     % fields = fieldnames(tmp);
     % Data = tmp.(fields{1});
@@ -99,7 +132,7 @@ for iObs = 1:nObs
     % absForces = abs(Forces(:, 3, :)); % z-component of force
     % weightedCOPs = (absForces .* COPs) ./ sum(absForces, 1);
     % COP = squeeze(sum(weightedCOPs, 1, 'omitnan'));
-    % 
+    %
     % iStart = find(abs(Force(3,:))>InitForce, 1, 'first');
     % iStart = iStart + floor(InitMarg/dt);
     % Force = Force(:, iStart:end);
@@ -109,14 +142,14 @@ for iObs = 1:nObs
     % COP = COP(:, iStart:iStop+iStart-1);
     % nSamples = size(Force, 2);
     % Time = (0:nSamples-1)/Frequency;
-    % 
-    % 
+    %
+    %
     % % remove non-contact phases
     % idxContact = ~any(COP, 1);
     % COP(:, idxContact) = NaN;
     % idxContact = ~any(isnan(COP), 1);
     % nSamplesContact = sum(idxContact);
-    % 
+    %
     % switch observation.task
     %     case 'Einbein'
     %     case 'Balance'
@@ -135,15 +168,15 @@ for iObs = 1:nObs
     %     otherwise
     %         continue
     % end
-    % 
-    % 
+    %
+    %
     % %% Plot data
-    % 
+    %
     % nRows = 4;
     % nCols = 1;
     % iPlot = 0;
     % fig = setupFigure(nCols*800, nRows*200, fname);
-    % 
+    %
     % % plot COP path
     % iPlot = iPlot+1;
     % subplot(nRows, nCols, iPlot);
@@ -154,7 +187,7 @@ for iObs = 1:nObs
     % hold on
     % scatter(COP(1, :), yBeamFcn(COP(1, :)), '.r');
     % axis equal
-    % 
+    %
     % % plot COP components
     % iPlot = iPlot+1;
     % subplot(nRows, nCols, iPlot);
@@ -164,7 +197,7 @@ for iObs = 1:nObs
     % xlabel('Time [s]');
     % ylabel('Position [m]');
     % legend({'x', 'y', 'z'});
-    % 
+    %
     % % plot distance to beam
     % iPlot = iPlot+1;
     % subplot(nRows, nCols, iPlot);
@@ -173,7 +206,7 @@ for iObs = 1:nObs
     % title(sprintf('Distance to beam'), 'Interpreter', 'none');
     % xlabel('Time [s]');
     % ylabel('Distance [m]');
-    % 
+    %
     % % plot GRF
     % iPlot = iPlot+1;
     % subplot(nRows, nCols, iPlot);
@@ -187,10 +220,10 @@ for iObs = 1:nObs
     % saveFigure(fig, filePath, 'png');
     % close(fig);
 
-    observations = [observations; observation]; %#ok<AGROW>
+    Observations = [Observations; observation]; %#ok<AGROW>
 end
 
-% subjects = unique(observations.subject);
-
+outpath = fullfile(outDir, 'Observations.xlsx');
+writetable(Observations, outpath, 'WriteMode', 'replacefile');
 
 
