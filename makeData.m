@@ -4,42 +4,40 @@ dataDir = Measurements.dataDir;
 outDir = Measurements.outDir;
 nMeas = length(Measurements.Info);
 
-fprintf('Loading files...\n');
+fprintf('Extract measurement data...\n');
 ticAll = tic;
 Measurements.Data(nMeas, 1) = struct;
-for iMeas = 1:2
+for iMeas = 1:nMeas
     fileName = Measurements.Info(iMeas).fileName;
     fpath = fullfile(dataDir, fileName);
     fprintf('\t-> %s\n', fileName);
 
-    subjectWeight = Measurements.Info(iMeas).weight;
-
-    Measurements.Info(iMeas).isValid = 1;
+    Measurements.Info(iMeas).isForce = 1;
     tmp = load(fpath);
     fields = fieldnames(tmp);
     Data = tmp.(fields{1});
     lengthScale = 0.001; % mm -> m
-    [Forces, Frequency, COPs, ~, Location, Analog] = kraftAusQualisys(Data, lengthScale);
+    [Forces, sampleRate, COPs, ~, location, Analog] = kraftAusQualisys(Data, lengthScale);
     PowerLineHum = 50;
     nSamples = length(Forces);
     if nSamples < 2^nextpow2(PowerLineHum)/2
         fprintf('\t\tNot enough data (%d samples) -> skipping\n', nSamples);
-        Measurements.Info(iMeas).isValid = 0;
+        Measurements.Info(iMeas).isForce = 0;
         continue
     end
     Forces = -Forces; % ground reaction forces are inverse of plate forces
     nPlates = size(Forces, 1);
     % nSamples = size(Forces, 3);
-    dt = 1/Frequency; % time step size [s]
+    dt = 1/sampleRate; % time step size [s]
     LoadThresh = 20; % threshold below which forces are set to zero [N]
     InitForce = 200; % force threshold to cross to start trial [N]
     InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
-    HumPeriod = Frequency/50;
+    HumPeriod = sampleRate/50;
     % CutoffFrequency = 20;
     for iPlate = 1:nPlates
         Forces(iPlate, :, :) = periodicMedianFilter(squeeze(Forces(iPlate, :, :)), HumPeriod);
     end
-    [COPs, ~, Forces, ~] = getCOPfromAnalog(Analog, Forces, [], Location, Frequency, [], [], [], COPs);
+    [COPs, ~, Forces, ~] = getCOPfromAnalog(Analog, Forces, [], location, sampleRate, [], [], [], COPs);
     % ignore data if Force in Z -direction is smaller than -LoadThresh Newton
     for iPlate = 1:nPlates
         idxContact = (abs(Forces(iPlate, 3, :)) < LoadThresh);
@@ -59,56 +57,38 @@ for iMeas = 1:2
     Force = Force(:, 1:iStop);
     COP = COP(:, iStart:iStop+iStart-1);
     nSamples = size(Force, 2);
-    Time = (0:nSamples-1)/Frequency;
+    Time = (0:nSamples-1)/sampleRate;
 
     % remove non-contact phases
     idxContact = ~any(COP, 1);
     COP(:, idxContact) = NaN;
     idxContact = ~any(isnan(COP), 1);
 
-    % distance to beam (for task "Balance")
-    COPx = COP(1, idxContact);
-    COPy = COP(2, idxContact);
-    coefficients = polyfit(COPx, COPy, 1);
-    yBeamFcn = @(x) polyval(coefficients, x);
-    beamDistFcn = @(x, y) abs(y - yBeamFcn(x));
-    BeamDist = beamDistFcn(COP(1, :), COP(2, :));
-
-    % jerk
-    dJerk = diff(Force, 1, 2);
-    Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
-
-
+    %% Store data
     Measurements.Data(iMeas).fileName = fileName;
-    Measurements.Data(iMeas).Frequency = Frequency;
+    Measurements.Data(iMeas).nSamples = nSamples;
+    Measurements.Data(iMeas).sampleRate = sampleRate;
     Measurements.Data(iMeas).Time = Time;
     Measurements.Data(iMeas).Force = Force;
     Measurements.Data(iMeas).COP = COP;
-    Measurements.Data(iMeas).idxContact = idxContact;
-    Measurements.Data(iMeas).BeamDist = BeamDist;
-    Measurements.Data(iMeas).Jerk = Jerk;
+    Measurements.Data(iMeas).idxContact = idxContact;    
 
     %% Plot data
 
     % setup figure
     nRows = 3;
-    nCols = 2;
+    nCols = 1;
     iPlot = 0;
     fig = setupFigure(nCols*400, nRows*200, fileName);
 
     % plot COP path
     iPlot = iPlot+1;
     subplot(nRows, nCols, iPlot);
-    hold on
-    xFit = linspace(min(COPx), max(COPx), nSamples);
-    yFit = yBeamFcn(xFit);
-    scatter(xFit, yFit, 2, 'red', '.');
     scatter(COP(1, :), COP(2, :), 2, 'blue');
     title(sprintf('COP path'), 'Interpreter', 'none');
     xlabel('x [m]');
     ylabel('y [m]');
     axis equal
-    legend({'Beam', 'COP'});
 
     % plot COP components
     iPlot = iPlot+1;
@@ -130,33 +110,15 @@ for iMeas = 1:2
     xlabel('Time [s]');
     ylabel('Force [N]');
     xlim([Time(1), Time(end)]);
-
-    % plot distance to beam
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    plot(Time', beamDistFcn(COP(1, :), COP(2, :))');
-    xlim([Time(1), Time(end)]);
-    title(sprintf('Distance to beam'), 'Interpreter', 'none');
-    xlabel('Time [s]');
-    ylabel('Distance [m]');
-
-    % plot jerk
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    plot(Time', Jerk');
-    xlim([Time(1), Time(end)]);
-    title(sprintf('Jerk'), 'Interpreter', 'none');
-    xlabel('Time [s]');
-    ylabel('Jerk [m/s^3]');
-    legend({'x', 'y', 'z'});
-
+    
+    % figure title
     sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
     % save figure
     ftypes = {'png', 'pdf', 'fig'};
     for iType = 1:length(ftypes)
         ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, ftype);
+        myOutDir = fullfile(outDir, 'data', ftype);
         if ~isfolder(myOutDir)
             mkdir(myOutDir);
         end
@@ -165,7 +127,7 @@ for iMeas = 1:2
     end
     close(fig);
 end
-sprintf('Finished in %f s.', toc(ticAll));
+sprintf('Finished in %f s\n\n', toc(ticAll));
 
 
 end

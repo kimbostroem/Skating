@@ -17,6 +17,9 @@ Measurements = makeInfo(Measurements);
 % get data
 Measurements = makeData(Measurements);
 
+% get metrics
+Measurements = makeMetrics(Measurements);
+
 % save everything
 outpath = fullfile(Measurements.outDir, 'Measurements');
 save(outpath, 'Measurements');

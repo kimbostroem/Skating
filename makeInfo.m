@@ -20,8 +20,8 @@ fpaths(idxContact) = []; % remove folders and hidden files
 nMeas = length(fpaths);
 
 Measurements.Info(nMeas, 1) = struct;
-fprintf('Loading files...\n');
-% ticLoadingFiles = tic;
+fprintf('Extract measurement info...\n');
+ticAll = tic;
 for iMeas = 1:nMeas
     fpath = fpaths{iMeas};
     [~, fileName, ~] = fileparts(fpath);
@@ -105,6 +105,8 @@ for iMeas = 1:nMeas
     % store file name in Measurements.Info(iMeas)
     Measurements.Info(iMeas).fileName = string(fileName);
 end
+
+fprintf('Finished in %f s\n\n', toc(ticAll));
 
 end
 
