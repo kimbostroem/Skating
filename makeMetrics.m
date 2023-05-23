@@ -30,6 +30,7 @@ for iMeas = 1:nMeas
     % jerk
     dJerk = diff(Force, 1, 2);
     Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
+    Jerk(:, ~idxContact) = 0; % remove jerk around gaps
 
     % path length
     pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
@@ -109,7 +110,7 @@ end
 %% Saving table
 validIdx = [Measurements.Info.isForce];
 MeasurementTable = struct2table(Measurements.Info(validIdx));
-outpath = fullfile(outDir, 'Measurements.xlsx');
+outpath = fullfile(outDir, 'Observations.xlsx');
 writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
 
 sprintf('Finished in %f s\n\n', toc(ticAll));

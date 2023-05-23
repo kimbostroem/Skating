@@ -1,5 +1,11 @@
 function Measurements = makeData(Measurements)
 
+gapMargin = 0.1; % margin around gaps in seconds, because there the COP is distorted
+LoadThresh = 20; % threshold below which forces are set to zero [N]
+InitForce = 200; % force threshold to cross to start trial [N]
+InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
+HumFreq = 50; % humming frequency in Hz
+
 dataDir = Measurements.dataDir;
 outDir = Measurements.outDir;
 nMeas = length(Measurements.Info);
@@ -27,22 +33,17 @@ for iMeas = 1:nMeas
     end
     Forces = -Forces; % ground reaction forces are inverse of plate forces
     nPlates = size(Forces, 1);
-    % nSamples = size(Forces, 3);
     dt = 1/sampleRate; % time step size [s]
-    LoadThresh = 20; % threshold below which forces are set to zero [N]
-    InitForce = 200; % force threshold to cross to start trial [N]
-    InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
-    HumPeriod = sampleRate/50;
-    % CutoffFrequency = 20;
+    HumPeriod = sampleRate/HumFreq;
     for iPlate = 1:nPlates
         Forces(iPlate, :, :) = periodicMedianFilter(squeeze(Forces(iPlate, :, :)), HumPeriod);
     end
     [COPs, ~, Forces, ~] = getCOPfromAnalog(Analog, Forces, [], location, sampleRate, [], [], [], COPs);
     % ignore data if Force in Z -direction is smaller than -LoadThresh Newton
     for iPlate = 1:nPlates
-        idxContact = (abs(Forces(iPlate, 3, :)) < LoadThresh);
-        Forces(iPlate, :, idxContact) = 0;
-        COPs(iPlate, :, idxContact) = NaN;
+        idxPlateGaps = squeeze(abs(Forces(iPlate, 3, :)) < LoadThresh)';
+        Forces(iPlate, :, idxPlateGaps) = 0;
+        COPs(iPlate, :, idxPlateGaps) = NaN;
     end
     Force = squeeze(sum(Forces, 1, 'omitnan'));
     absForces = abs(Forces(:, 3, :)); % z-component of force
@@ -59,19 +60,45 @@ for iMeas = 1:nMeas
     nSamples = size(Force, 2);
     Time = (0:nSamples-1)/sampleRate;
 
-    % remove non-contact phases
-    idxContact = ~any(COP, 1);
-    COP(:, idxContact) = NaN;
-    idxContact = ~any(isnan(COP), 1);
+    %% Remove non-contact phases from COP
+
+    idxGaps = ~any(COP, 1);
+    COP(:, idxGaps) = NaN;
+
+    %% Add gap margins
+
+    gapMarginSmp = round(gapMargin * sampleRate); % gap margin in samples
+    % find the beginnings of each gap
+    gapStart = [-1, find(idxGaps)];   
+    dGapStart = [1, diff(gapStart)];
+    gapStart(dGapStart == 1) = [];
+    % find the endings of the gaps
+    gapStop = [find(idxGaps), nSamples+2]; 
+    dGapStop = [diff(gapStop), 1];
+    gapStop(dGapStop == 1) = [];
+    % enlarge the gaps by margin
+    gapStart = gapStart - gapMarginSmp;
+    gapStop = gapStop + gapMarginSmp;
+    % keep within data range
+    gapStart(gapStart < 1)  = 1;
+    gapStop(gapStop > nSamples) = nSamples;
+    % re-create bool array for non-gap indices
+    for iSample = 1:length(gapStart)
+        idxGaps(gapStart(iSample):gapStop(iSample)) = true;
+    end
+
+    % set COP within gaps to NaN
+    COP(:, idxGaps) = NaN;
 
     %% Store data
+
     Measurements.Data(iMeas).fileName = fileName;
     Measurements.Data(iMeas).nSamples = nSamples;
     Measurements.Data(iMeas).sampleRate = sampleRate;
     Measurements.Data(iMeas).Time = Time;
     Measurements.Data(iMeas).Force = Force;
     Measurements.Data(iMeas).COP = COP;
-    Measurements.Data(iMeas).idxContact = idxContact;    
+    Measurements.Data(iMeas).idxContact = ~idxGaps;
 
     %% Plot data
 
@@ -110,7 +137,7 @@ for iMeas = 1:nMeas
     xlabel('Time [s]');
     ylabel('Force [N]');
     xlim([Time(1), Time(end)]);
-    
+
     % figure title
     sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
