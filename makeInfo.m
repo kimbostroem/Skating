@@ -100,6 +100,14 @@ for iMeas = 1:nMeas
     end
     Measurements.Info(iMeas).side = string(side);
     Measurements.Info(iMeas).isMarker = isMarker;
+
+    % jump position markers
+    Measurements.Info(iMeas).Beidbein_start = Subjects.Beidbein_start(subjectIdx);
+    Measurements.Info(iMeas).Beidbein_stop = Subjects.Beidbein_stop(subjectIdx);
+    Measurements.Info(iMeas).Einbein_start = Subjects.Einbein_start(subjectIdx);
+    Measurements.Info(iMeas).Einbein_stop = Subjects.Einbein_stop(subjectIdx);
+
+    % trial number
     Measurements.Info(iMeas).trial = trial;
 
     % store file name in Measurements.Info(iMeas)

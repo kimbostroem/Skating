@@ -16,7 +16,11 @@ Measurements.Data(nMeas, 1) = struct;
 for iMeas = 1:nMeas
     fileName = Measurements.Info(iMeas).fileName;
     fpath = fullfile(dataDir, fileName);
-    fprintf('\t-> %s\n', fileName);
+    task = Measurements.Info(iMeas).task;
+    side = Measurements.Info(iMeas).side;
+    fprintf('\t-> %s (%s %s)\n', fileName, task, side);    
+
+    %% Import Force data
 
     Measurements.Info(iMeas).isForce = 1;
     tmp = load(fpath);
@@ -87,8 +91,42 @@ for iMeas = 1:nMeas
         idxGaps(gapStart(iSample):gapStop(iSample)) = true;
     end
 
-    % set COP within gaps to NaN
+    %% set COP within gaps to NaN
+
     COP(:, idxGaps) = NaN;
+
+    %% Import marker data
+    % get jump start and stop position
+
+    startPos = nan(3, nSamples);
+    stopPos = nan(3, nSamples);
+    if isfield(Data, 'Trajectories') && isfield(Data.Trajectories, 'Labeled')
+        labels = Data.Trajectories.Labeled.Labels;
+        nSamples_kin = Data.Frames;
+        sampleRate_kin = Data.FrameRate;
+        Time_kin = (0:nSamples_kin-1)/sampleRate_kin;        
+        % get start and stop marker labels
+        switch side
+            case 'B'
+                startLabel = Measurements.Info(iMeas).Beidbein_start;
+                stopLabel = Measurements.Info(iMeas).Beidbein_stop;
+            case {'L', 'R'}
+                startLabel = Measurements.Info(iMeas).Einbein_start;
+                stopLabel = Measurements.Info(iMeas).Einbein_stop;
+            otherwise
+        end
+        % get start and stop marker data
+        idx = strcmp(labels, startLabel);
+        if any(idx)
+            pos_raw = squeeze(Data.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
+            startPos = interp1(Time_kin', pos_raw', Time')';
+        end
+        idx = strcmp(labels, stopLabel);
+        if any(idx)
+            pos_raw = squeeze(Data.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
+            stopPos = interp1(Time_kin', pos_raw', Time')';
+        end
+    end
 
     %% Store data
 
@@ -99,6 +137,8 @@ for iMeas = 1:nMeas
     Measurements.Data(iMeas).Force = Force;
     Measurements.Data(iMeas).COP = COP;
     Measurements.Data(iMeas).idxContact = ~idxGaps;
+    Measurements.Data(iMeas).startPos = startPos;
+    Measurements.Data(iMeas).stopPos = stopPos;
 
     %% Plot data
 
@@ -112,9 +152,17 @@ for iMeas = 1:nMeas
     iPlot = iPlot+1;
     subplot(nRows, nCols, iPlot);
     scatter(COP(1, :), COP(2, :), 2, 'blue');
+    if strcmp(task, 'Sprung')
+        hold on
+        scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
+        scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
+    end
     title(sprintf('COP path'), 'Interpreter', 'none');
     xlabel('x [m]');
     ylabel('y [m]');
+    if strcmp(task, 'Sprung')
+        legend({'COP', 'jump start', 'jump stop'});
+    end
     axis equal
 
     % plot COP components
@@ -138,7 +186,7 @@ for iMeas = 1:nMeas
     ylabel('Force [N]');
     xlim([Time(1), Time(end)]);
 
-    % figure title
+    % global figure title
     sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
     % save figure
