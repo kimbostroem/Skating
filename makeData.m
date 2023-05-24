@@ -22,7 +22,7 @@ for iMeas = 1:nMeas
 
     %% Import Force data
 
-    Measurements.Info(iMeas).isForce = 1;
+    Measurements.Data(iMeas).isForce = 1;
     tmp = load(fpath);
     fields = fieldnames(tmp);
     Data = tmp.(fields{1});
@@ -32,7 +32,7 @@ for iMeas = 1:nMeas
     nSamples = length(Forces);
     if nSamples < 2^nextpow2(PowerLineHum)/2
         fprintf('\t\tNot enough data (%d samples) -> skipping\n', nSamples);
-        Measurements.Info(iMeas).isForce = 0;
+        Measurements.Data(iMeas).isForce = 0;
         continue
     end
     Forces = -Forces; % ground reaction forces are inverse of plate forces
@@ -52,7 +52,8 @@ for iMeas = 1:nMeas
     Force = squeeze(sum(Forces, 1, 'omitnan'));
     absForces = abs(Forces(:, 3, :)); % z-component of force
     weightedCOPs = (absForces .* COPs) ./ sum(absForces, 1);
-    COP = squeeze(sum(weightedCOPs, 1, 'omitnan'));
+    COPxyz = squeeze(sum(weightedCOPs, 1, 'omitnan'));
+    COP = COPxyz(1:2, :);
 
     iStart = find(abs(Force(3,:))>InitForce, 1, 'first');
     iStart = iStart + floor(InitMarg/dt);
@@ -160,7 +161,7 @@ for iMeas = 1:nMeas
     xlabel('x [m]');
     ylabel('y [m]');
     if strcmp(task, 'Sprung')
-        legend({'COP', 'jump start', 'jump stop'});
+        legend({'COP', 'jump start position', 'jump stop position'});
     end
     axis equal
 
@@ -172,7 +173,7 @@ for iMeas = 1:nMeas
     title(sprintf('COP components'), 'Interpreter', 'none');
     xlabel('Time [s]');
     ylabel('Position [m]');
-    legend({'x', 'y', 'z'});
+    legend({'x', 'y'});
 
     % plot GRF
     iPlot = iPlot+1;

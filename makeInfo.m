@@ -90,16 +90,13 @@ for iMeas = 1:nMeas
 
     % side or Kraft
     if strcmp(parts{4}, 'Kraft')
-        isMarker = 0;
         side = parts{5};
         trial = parts{6};
     else
-        isMarker = 1;
         side = parts{4};
         trial = parts{5};
     end
     Measurements.Info(iMeas).side = string(side);
-    Measurements.Info(iMeas).isMarker = isMarker;
 
     % jump position markers
     Measurements.Info(iMeas).Beidbein_start = Subjects.Beidbein_start(subjectIdx);

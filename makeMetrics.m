@@ -18,39 +18,59 @@ for iMeas = 1:nMeas
     dt = 1/sampleRate; % time step size [s]
     nSamples = Measurements.Data(iMeas).nSamples;
     task = Measurements.Info(iMeas).task;
+    startPos = Measurements.Data(iMeas).startPos;
+    stopPos = Measurements.Data(iMeas).stopPos;
 
-    % distance to beam (for task "Balance")
-    COPx = COP(1, idxContact);
-    COPy = COP(2, idxContact);
-    coefficients = polyfit(COPx, COPy, 1);
-    yBeamFcn = @(x) polyval(coefficients, x);
-    beamDistFcn = @(x, y) abs(y - yBeamFcn(x));
-    BeamDist = beamDistFcn(COP(1, :), COP(2, :));
+    switch task
 
-    % jerk
-    dJerk = diff(Force, 1, 2);
-    Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
-    Jerk(:, ~idxContact) = 0; % remove jerk around gaps
+        case {'Balance', 'Einbein'}
 
-    % path length
-    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
-    
-    % mean beam distance
-    meanBeamDist = mean(BeamDist, 'omitnan');
+            if strcmp(task, 'Balance')
+                % distance to beam (for task "Balance")
+                coefficients = polyfit(COP(1, idxContact), COP(2, idxContact), 1);
+                targetFcn = @(x, y) polyval(coefficients, x);
+                targetDistFcn = @(x, y) abs(y - targetFcn(x, y));
+            elseif strcmp(task, 'Einbein')
+                meanCOP = mean(COP, 2);
+                targetDistFcn = @(x, y) vecnorm([x; y] - meanCOP);
+            end
+            targetDist = targetDistFcn(COP(1, :), COP(2, :));
 
-    % mean jerk
-    meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
-    meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
+            % jerk
+            dJerk = diff(Force, 1, 2);
+            Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
+            Jerk(:, ~idxContact) = 0; % remove jerk around gaps
+
+            % path length
+            pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
+
+            % mean beam distance
+            targetError = mean(targetDist, 'omitnan');
+
+            % mean jerk
+            meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
+            meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
+            Measurements.Data(iMeas).targetDist = targetDist;
+            Measurements.Data(iMeas).Jerk = Jerk;
+            Measurements.Info(iMeas).pathLength = pathLength;
+            Measurements.Info(iMeas).targetError = targetError;
+            Measurements.Info(iMeas).meanJerk = meanJerk;
+            Measurements.Info(iMeas).meanJerkXY = meanJerkXY;
+
+        case 'Sprung'
+            % distance to jump stop position
+            targetDist = abs(Measurements.Data(iMeas).COP(1, :) - stopPos(1));
+            [targetError, targetIdx] = min(targetDist);
+            jumpStopPos = Measurements.Data(iMeas).COP(:, targetIdx);
+            Measurements.Data(iMeas).targetDist = targetDist;
+            Measurements.Info(iMeas).targetError = targetError;
+            Measurements.Info(iMeas).jumpStopPos = jumpStopPos;
+    end
 
 
     %% Store data
 
-    Measurements.Data(iMeas).BeamDist = BeamDist;
-    Measurements.Data(iMeas).Jerk = Jerk;  
-    Measurements.Info(iMeas).pathLength= pathLength;
-    Measurements.Info(iMeas).meanBeamDist = meanBeamDist;
-    Measurements.Info(iMeas).meanJerk = meanJerk;
-    Measurements.Info(iMeas).meanJerkXY = meanJerkXY;
+    
 
     %% Plot data
 
@@ -60,38 +80,116 @@ for iMeas = 1:nMeas
     iPlot = 0;
     fig = setupFigure(nCols*400, nRows*200, fileName);
 
-    % plot COP path with beam
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    hold on
-    xFit = linspace(min(COP(1, :)), max(COP(1, :)), nSamples);
-    yFit = yBeamFcn(xFit);
-    scatter(xFit, yFit, 2, 'red', '.');
-    scatter(COP(1, :), COP(2, :), 2, 'blue');
-    title(sprintf('COP path'), 'Interpreter', 'none');
-    xlabel('x [m]');
-    ylabel('y [m]');
-    axis equal
-    legend({'Beam', 'COP'});
+    switch task
 
-    % plot distance to beam
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    plot(Time', beamDistFcn(COP(1, :), COP(2, :))');
-    xlim([Time(1), Time(end)]);
-    title(sprintf('Distance to beam'), 'Interpreter', 'none');
-    xlabel('Time [s]');
-    ylabel('Distance [m]');
+        case 'Balance'
+            % plot COP path with beam
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            hold on
+            xFit = linspace(min(COP(1, :)), max(COP(1, :)), nSamples);
+            yFit = targetFcn(xFit);
+            scatter(xFit, yFit, 2, 'red', '.');
+            scatter(COP(1, :), COP(2, :), 2, 'blue');
+            title(sprintf('COP path'), 'Interpreter', 'none');
+            xlabel('x [m]');
+            ylabel('y [m]');
+            axis equal
+            legend({'Beam', 'COP'});
 
-    % plot jerk
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    plot(Time', Jerk');
-    xlim([Time(1), Time(end)]);
-    title(sprintf('Jerk'), 'Interpreter', 'none');
-    xlabel('Time [s]');
-    ylabel('Jerk [m/s^3]');
-    legend({'x', 'y', 'z'});
+            % plot distance to beam
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', targetDistFcn(COP(1, :), COP(2, :))');
+            hold on
+            yline(targetError, 'r');
+            yl = ylim;
+            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            xlim([Time(1), Time(end)]);
+            title(sprintf('Distance to beam'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Distance [m]');
+
+            % plot jerk
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', Jerk');
+            xlim([Time(1), Time(end)]);
+            title(sprintf('Jerk'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Jerk [m/s^3]');
+            legend({'x', 'y', 'z'});
+
+        case 'Einbein'
+            % plot COP path with center
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            hold on
+            scatter(COP(1, :), COP(2, :), 2, 'blue');
+            scatter(meanCOP(1), meanCOP(2), 24, 'red', 'x')
+            title(sprintf('COP path'), 'Interpreter', 'none');
+            xlabel('x [m]');
+            ylabel('y [m]');
+            axis equal
+            legend({'COP', 'center'});
+
+            % plot distance to center
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', targetDistFcn(COP(1, :), COP(2, :))');
+            hold on
+            yline(targetError, 'r');
+            yl = ylim;
+            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            xlim([Time(1), Time(end)]);
+            title(sprintf('Distance to center'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Distance [m]');            
+
+            % plot jerk
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', Jerk');
+            xlim([Time(1), Time(end)]);
+            title(sprintf('Jerk'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Jerk [m/s^3]');
+            legend({'x', 'y', 'z'});
+
+        case 'Sprung'
+            % plot COP path with jump stop position
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            hold on
+            scatter(COP(1, :), COP(2, :), 2, 'blue');
+            scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
+            scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
+            scatter(jumpStopPos(1), jumpStopPos(2), 10, 'red', 'x')
+            xline(startPos(1), 'g');
+            xline(stopPos(1), 'r');
+            title(sprintf('COP path'), 'Interpreter', 'none');
+            xlabel('x [m]');
+            ylabel('y [m]');
+            axis equal
+            legend({'COP', 'jump start pos', 'jump stop pos', 'landing'});
+
+            % plot distance to jump stop position
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', targetDist');
+            hold on
+            xline(Time(targetIdx), 'red');
+            xlim([Time(1), Time(end)]);
+            yl = ylim;
+            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            title(sprintf('Distance from landing to jump stop pos'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Distance [m]');
+
+    end
+
+    % global figure title
+    sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
     % save figure
     ftypes = {'png', 'pdf', 'fig'};
@@ -108,8 +206,7 @@ for iMeas = 1:nMeas
 end
 
 %% Saving table
-validIdx = [Measurements.Info.isForce];
-MeasurementTable = struct2table(Measurements.Info(validIdx));
+MeasurementTable = struct2table(Measurements.Info);
 outpath = fullfile(outDir, 'Observations.xlsx');
 writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
 
