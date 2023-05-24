@@ -96,15 +96,12 @@ for iMeas = 1:nMeas
     COP(:, idxGaps) = NaN;
 
     %% Import marker data
-    % get jump start and stop position
+    % get jump start and stop positions
 
-    startPos = nan(3, nSamples);
-    stopPos = nan(3, nSamples);
+    startPos = nan(3, 1);
+    stopPos = nan(3, 1);
     if isfield(Data, 'Trajectories') && isfield(Data.Trajectories, 'Labeled')
         labels = Data.Trajectories.Labeled.Labels;
-        nSamples_kin = Data.Frames;
-        sampleRate_kin = Data.FrameRate;
-        Time_kin = (0:nSamples_kin-1)/sampleRate_kin;        
         % get start and stop marker labels
         switch side
             case 'B'
@@ -119,12 +116,12 @@ for iMeas = 1:nMeas
         idx = strcmp(labels, startLabel);
         if any(idx)
             pos_raw = squeeze(Data.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
-            startPos = interp1(Time_kin', pos_raw', Time')';
+            startPos = mean(pos_raw, 2);
         end
         idx = strcmp(labels, stopLabel);
         if any(idx)
             pos_raw = squeeze(Data.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
-            stopPos = interp1(Time_kin', pos_raw', Time')';
+            stopPos = mean(pos_raw, 2);
         end
     end
 
@@ -156,6 +153,8 @@ for iMeas = 1:nMeas
         hold on
         scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
         scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
+        xline(startPos(1), 'g');
+        xline(stopPos(1), 'r');
     end
     title(sprintf('COP path'), 'Interpreter', 'none');
     xlabel('x [m]');
