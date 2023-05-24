@@ -19,7 +19,7 @@ fpaths = strcat(fdirs, filesep, fnames);
 fpaths(idxContact) = []; % remove folders and hidden files
 nMeas = length(fpaths);
 
-Measurements.Info(nMeas, 1) = struct;
+Measurements.Observations(nMeas, 1) = struct;
 fprintf('Extract measurement info...\n');
 ticAll = tic;
 for iMeas = 1:nMeas
@@ -45,15 +45,15 @@ for iMeas = 1:nMeas
         warning('Subject code %s not found -> skipping', subjectCode);
         continue
     end
-    Measurements.Info(iMeas).subjectName = string(subjectName); % store in Measurements.Info(iMeas)
-    Measurements.Info(iMeas).subjectCode = string(subjectCode);
+    Measurements.Observations(iMeas).subjectName = string(subjectName); % store in Measurements.Observations(iMeas)
+    Measurements.Observations(iMeas).subjectCode = string(subjectCode);
 
     % stage
     stageStr = parts{2};
     stage = find(strcmp(stages, stageStr), 1, 'first');
-    Measurements.Info(iMeas).stage = stage; % store in Measurements.Info(iMeas)
+    Measurements.Observations(iMeas).stage = stage; % store in Measurements.Observations(iMeas)
 
-    % subject properties at time of Measurements.Info(iMeas)
+    % subject properties at time of Measurements.Observations(iMeas)
     subjectProps = {'Height', 'Weight', 'Age', 'Date'};
     for iProp = 1:length(subjectProps)
         myStage = stage;
@@ -61,7 +61,7 @@ for iMeas = 1:nMeas
             propName = sprintf('%s_%s', subjectProps{iProp}, stages{myStage});
             propValue = Subjects.(propName)(subjectIdx);
             if strcmp(subjectProps{iProp}, 'Date') || ~isnan(propValue)
-                Measurements.Info(iMeas).(lower(subjectProps{iProp})) = propValue;
+                Measurements.Observations(iMeas).(lower(subjectProps{iProp})) = propValue;
                 break
             end
             myStage = myStage-1;
@@ -82,11 +82,11 @@ for iMeas = 1:nMeas
         case 'III'
             intervention = 1;
     end
-    Measurements.Info(iMeas).intervention = intervention;
+    Measurements.Observations(iMeas).intervention = intervention;
 
     % task
     task = parts{3};
-    Measurements.Info(iMeas).task = string(task);
+    Measurements.Observations(iMeas).task = string(task);
 
     % side or Kraft
     if strcmp(parts{4}, 'Kraft')
@@ -96,19 +96,19 @@ for iMeas = 1:nMeas
         side = parts{4};
         trial = parts{5};
     end
-    Measurements.Info(iMeas).side = string(side);
+    Measurements.Observations(iMeas).side = string(side);
 
     % jump position markers
-    Measurements.Info(iMeas).Beidbein_start = Subjects.Beidbein_start(subjectIdx);
-    Measurements.Info(iMeas).Beidbein_stop = Subjects.Beidbein_stop(subjectIdx);
-    Measurements.Info(iMeas).Einbein_start = Subjects.Einbein_start(subjectIdx);
-    Measurements.Info(iMeas).Einbein_stop = Subjects.Einbein_stop(subjectIdx);
+    Measurements.Observations(iMeas).Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
+    Measurements.Observations(iMeas).Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
+    Measurements.Observations(iMeas).Einbein_start = string(Subjects.Einbein_start(subjectIdx));
+    Measurements.Observations(iMeas).Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
 
     % trial number
-    Measurements.Info(iMeas).trial = trial;
+    Measurements.Observations(iMeas).trial = str2double(trial);
 
-    % store file name in Measurements.Info(iMeas)
-    Measurements.Info(iMeas).fileName = string(fileName);
+    % store file name in Measurements.Observations(iMeas)
+    Measurements.Observations(iMeas).fileName = string(fileName);
 end
 
 fprintf('Finished in %f s\n\n', toc(ticAll));

@@ -8,16 +8,16 @@ HumFreq = 50; % humming frequency in Hz
 
 dataDir = Measurements.dataDir;
 outDir = Measurements.outDir;
-nMeas = length(Measurements.Info);
+nMeas = length(Measurements.Observations);
 
 fprintf('Extract measurement data...\n');
 ticAll = tic;
 Measurements.Data(nMeas, 1) = struct;
 for iMeas = 1:nMeas
-    fileName = Measurements.Info(iMeas).fileName;
+    fileName = Measurements.Observations(iMeas).fileName;
     fpath = fullfile(dataDir, fileName);
-    task = Measurements.Info(iMeas).task;
-    side = Measurements.Info(iMeas).side;
+    task = Measurements.Observations(iMeas).task;
+    side = Measurements.Observations(iMeas).side;
     fprintf('\t-> %s (%s %s)\n', fileName, task, side);    
 
     %% Import Force data
@@ -106,11 +106,11 @@ for iMeas = 1:nMeas
         % get start and stop marker labels
         switch side
             case 'B'
-                startLabel = Measurements.Info(iMeas).Beidbein_start;
-                stopLabel = Measurements.Info(iMeas).Beidbein_stop;
+                startLabel = Measurements.Observations(iMeas).Beidbein_start;
+                stopLabel = Measurements.Observations(iMeas).Beidbein_stop;
             case {'L', 'R'}
-                startLabel = Measurements.Info(iMeas).Einbein_start;
-                stopLabel = Measurements.Info(iMeas).Einbein_stop;
+                startLabel = Measurements.Observations(iMeas).Einbein_start;
+                stopLabel = Measurements.Observations(iMeas).Einbein_stop;
             otherwise
         end
         % get start and stop marker data

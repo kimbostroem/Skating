@@ -1,15 +1,15 @@
 function Measurements = makeMetrics(Measurements)
 
-nMeas = length(Measurements.Info);
+nMeas = length(Measurements.Observations);
 outDir = Measurements.outDir;
 
 fprintf('Create metrics...\n');
 ticAll = tic;
 for iMeas = 1:nMeas
-    fileName = Measurements.Info(iMeas).fileName;
+    fileName = Measurements.Observations(iMeas).fileName;
     fprintf('\t-> %s\n', fileName);
 
-    subjectWeight = Measurements.Info(iMeas).weight;
+    subjectWeight = Measurements.Observations(iMeas).weight;
     Time = Measurements.Data(iMeas).Time;
     Force = Measurements.Data(iMeas).Force;
     COP = Measurements.Data(iMeas).COP;
@@ -17,7 +17,7 @@ for iMeas = 1:nMeas
     sampleRate = Measurements.Data(iMeas).sampleRate;
     dt = 1/sampleRate; % time step size [s]
     nSamples = Measurements.Data(iMeas).nSamples;
-    task = Measurements.Info(iMeas).task;
+    task = Measurements.Observations(iMeas).task;
     startPos = Measurements.Data(iMeas).startPos;
     stopPos = Measurements.Data(iMeas).stopPos;
 
@@ -52,10 +52,10 @@ for iMeas = 1:nMeas
             meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
             Measurements.Data(iMeas).targetDist = targetDist;
             Measurements.Data(iMeas).Jerk = Jerk;
-            Measurements.Info(iMeas).pathLength = pathLength;
-            Measurements.Info(iMeas).targetError = targetError;
-            Measurements.Info(iMeas).meanJerk = meanJerk;
-            Measurements.Info(iMeas).meanJerkXY = meanJerkXY;
+            Measurements.Observations(iMeas).pathLength = pathLength;
+            Measurements.Observations(iMeas).targetError = targetError;
+            Measurements.Observations(iMeas).meanJerk = meanJerk;
+            Measurements.Observations(iMeas).meanJerkXY = meanJerkXY;
 
         case 'Sprung'
             % distance to jump stop position
@@ -63,8 +63,8 @@ for iMeas = 1:nMeas
             [targetError, targetIdx] = min(targetDist);
             jumpStopPos = Measurements.Data(iMeas).COP(:, targetIdx);
             Measurements.Data(iMeas).targetDist = targetDist;
-            Measurements.Info(iMeas).targetError = targetError;
-            Measurements.Info(iMeas).jumpStopPos = jumpStopPos;
+            Measurements.Observations(iMeas).targetError = targetError;
+            Measurements.Data(iMeas).jumpStopPos = jumpStopPos;
     end
 
 
@@ -195,7 +195,7 @@ for iMeas = 1:nMeas
     ftypes = {'png', 'pdf', 'fig'};
     for iType = 1:length(ftypes)
         ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, 'metric', ftype);
+        myOutDir = fullfile(outDir, 'metrics', ftype);
         if ~isfolder(myOutDir)
             mkdir(myOutDir);
         end
@@ -206,7 +206,7 @@ for iMeas = 1:nMeas
 end
 
 %% Saving table
-MeasurementTable = struct2table(Measurements.Info);
+MeasurementTable = struct2table(Measurements.Observations);
 outpath = fullfile(outDir, 'Observations.xlsx');
 writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
 
