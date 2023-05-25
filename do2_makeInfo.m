@@ -1,4 +1,4 @@
-function Measurements = do2_makeInfo(Measurements)
+function do2_makeInfo(Measurements)
 
 if nargin < 1
     load('Measurements'); %#ok<LOAD>
@@ -16,7 +16,7 @@ Subjects = readtable(fullfile(paramDir, 'Subjects.xlsx'));
 stages = {'I', 'II', 'III'};
 
 % list content of input folder into cell array
-dirInfo = dir(dataDir);
+dirInfo = dir(fullfile(dataDir, '*.mat'));
 fdirs = {dirInfo.folder}';
 fnames = {dirInfo.name}';
 idxContact = startsWith(fnames', {'.', '~'}) | [dirInfo.isdir];
@@ -36,7 +36,7 @@ for iMeas = 1:nMeas
     end
 
     % report progress
-    fprintf('\t-> %s\n', fileName);
+    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
     % split file name at underscores
     parts = strsplit(fileName, '_');
@@ -125,8 +125,6 @@ assignin('base', 'Measurements', Measurements);
 
 fprintf('Saving Measurements to MAT file...\n');
 save('Measurements', 'Measurements');
-fprintf('Copying Measurements.mat to output folder...\n');
-copyfile('Measurements.mat', outDir);
 fprintf('DONE\n\n');
 
 end

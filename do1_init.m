@@ -10,9 +10,9 @@ close all
 Measurements = struct;
 
 % set folders
-Measurements.dataDir = '/Users/kbostroem/sciebo/Skating/Skating_In';
-Measurements.outDir = '/Users/kbostroem/sciebo/Skating/Skating_Out';
-Measurements.paramDir = '/Users/kbostroem/sciebo/Skating/Auswertung';
+Measurements.dataDir = fullfile('..', 'Skating_In');
+Measurements.outDir = fullfile('..', 'Skating_Out');
+Measurements.paramDir = fullfile('..', 'Skating_In');
 
 %% Save to MAT file
 

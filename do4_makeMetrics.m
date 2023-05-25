@@ -1,4 +1,4 @@
-function Measurements = do4_makeMetrics(Measurements)
+function do4_makeMetrics(Measurements)
 
 if nargin < 1
     load('Measurements'); %#ok<LOAD>
@@ -11,7 +11,9 @@ fprintf('Create metrics...\n');
 ticAll = tic;
 for iMeas = 1:nMeas
     fileName = Measurements.Observations(iMeas).fileName;
-    fprintf('\t-> %s\n', fileName);
+    
+    % report progress
+    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
     subjectWeight = Measurements.Observations(iMeas).weight;
     Time = Measurements.Data(iMeas).Time;
@@ -69,6 +71,25 @@ for iMeas = 1:nMeas
             Measurements.Data(iMeas).targetDist = targetDist;
             Measurements.Observations(iMeas).targetError = targetError;
             Measurements.Data(iMeas).jumpStopPos = jumpStopPos;
+
+            % jerk
+            dJerk = diff(Force, 1, 2);
+            Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
+            Jerk(:, ~idxContact) = 0; % remove jerk around gaps
+
+            % path length
+            pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
+
+            % mean beam distance
+            targetError = mean(targetDist, 'omitnan');
+
+            % mean jerk
+            meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
+            meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
+            Measurements.Data(iMeas).Jerk = Jerk;
+            Measurements.Observations(iMeas).pathLength = pathLength;
+            Measurements.Observations(iMeas).meanJerk = meanJerk;
+            Measurements.Observations(iMeas).meanJerkXY = meanJerkXY;
     end
 
 
@@ -190,6 +211,16 @@ for iMeas = 1:nMeas
             xlabel('Time [s]');
             ylabel('Distance [m]');
 
+            % plot jerk
+            iPlot = iPlot+1;
+            subplot(nRows, nCols, iPlot);
+            plot(Time', Jerk');
+            xlim([Time(1), Time(end)]);
+            title(sprintf('Jerk'), 'Interpreter', 'none');
+            xlabel('Time [s]');
+            ylabel('Jerk [m/s^3]');
+            legend({'x', 'y', 'z'});
+
     end
 
     % global figure title
@@ -225,8 +256,8 @@ assignin('base', 'Measurements', Measurements);
 
 fprintf('Saving Measurements to MAT file...\n');
 save('Measurements', 'Measurements');
-fprintf('Copying Measurements.mat to output folder...\n');
-copyfile('Measurements.mat', outDir);
+fprintf('Moving Measurements.mat to output folder...\n');
+movefile('Measurements.mat', outDir);
 fprintf('DONE\n\n');
 
 end

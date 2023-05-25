@@ -1,4 +1,4 @@
-function Measurements = do3_makeData(Measurements)
+function do3_makeData(Measurements)
 
 if nargin < 1
     load('Measurements'); %#ok<LOAD>
@@ -22,7 +22,9 @@ for iMeas = 1:nMeas
     fpath = fullfile(dataDir, fileName);
     task = Measurements.Observations(iMeas).task;
     side = Measurements.Observations(iMeas).side;
-    fprintf('\t-> %s (%s %s)\n', fileName, task, side);    
+
+    % report progress
+    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
     %% Import Force data
 
@@ -216,8 +218,6 @@ assignin('base', 'Measurements', Measurements);
 
 fprintf('Saving Measurements to MAT file...\n');
 save('Measurements', 'Measurements');
-fprintf('Copying Measurements.mat to output folder...\n');
-copyfile('Measurements.mat', outDir);
 fprintf('DONE\n\n');
 
 end
