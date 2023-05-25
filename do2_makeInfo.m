@@ -1,8 +1,13 @@
-function Measurements = makeInfo(Measurements)
+function Measurements = do2_makeInfo(Measurements)
+
+if nargin < 1
+    load('Measurements'); %#ok<LOAD>
+end
 
 % get folders
 dataDir = Measurements.dataDir;
 paramDir = Measurements.paramDir;
+outDir = Measurements.outDir;
 
 % load table containing subjects info
 Subjects = readtable(fullfile(paramDir, 'Subjects.xlsx'));
@@ -110,8 +115,19 @@ for iMeas = 1:nMeas
     % store file name in Measurements.Observations(iMeas)
     Measurements.Observations(iMeas).fileName = string(fileName);
 end
+fprintf('Finished in %f s\n', toc(ticAll));
 
-fprintf('Finished in %f s\n\n', toc(ticAll));
+%% Export Measurements structure to base workspace
+
+assignin('base', 'Measurements', Measurements);
+
+%% Save Measurements structure to MAT file
+
+fprintf('Saving Measurements to MAT file...\n');
+save('Measurements', 'Measurements');
+fprintf('Copying Measurements.mat to output folder...\n');
+copyfile('Measurements.mat', outDir);
+fprintf('DONE\n\n');
 
 end
 

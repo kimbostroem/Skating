@@ -1,4 +1,8 @@
-function Measurements = makeData(Measurements)
+function Measurements = do3_makeData(Measurements)
+
+if nargin < 1
+    load('Measurements'); %#ok<LOAD>
+end
 
 gapMargin = 0.1; % margin around gaps in seconds, because there the COP is distorted
 LoadThresh = 20; % threshold below which forces are set to zero [N]
@@ -204,5 +208,16 @@ for iMeas = 1:nMeas
 end
 sprintf('Finished in %f s\n\n', toc(ticAll));
 
+%% Export Measurements structure to base workspace
+
+assignin('base', 'Measurements', Measurements);
+
+%% Save Measurements structure to MAT file
+
+fprintf('Saving Measurements to MAT file...\n');
+save('Measurements', 'Measurements');
+fprintf('Copying Measurements.mat to output folder...\n');
+copyfile('Measurements.mat', outDir);
+fprintf('DONE\n\n');
 
 end

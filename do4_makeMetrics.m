@@ -1,4 +1,8 @@
-function Measurements = makeMetrics(Measurements)
+function Measurements = do4_makeMetrics(Measurements)
+
+if nargin < 1
+    load('Measurements'); %#ok<LOAD>
+end
 
 nMeas = length(Measurements.Observations);
 outDir = Measurements.outDir;
@@ -204,12 +208,25 @@ for iMeas = 1:nMeas
     end
     close(fig);
 end
+sprintf('Finished in %f s\n\n', toc(ticAll));
 
 %% Saving table
+
+fprintf('Saving Observations to table...\n');
 MeasurementTable = struct2table(Measurements.Observations);
 outpath = fullfile(outDir, 'Observations.xlsx');
 writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
 
-sprintf('Finished in %f s\n\n', toc(ticAll));
+%% Export Measurements structure to base workspace
+
+assignin('base', 'Measurements', Measurements);
+
+%% Save Measurements structure to MAT file
+
+fprintf('Saving Measurements to MAT file...\n');
+save('Measurements', 'Measurements');
+fprintf('Copying Measurements.mat to output folder...\n');
+copyfile('Measurements.mat', outDir);
+fprintf('DONE\n\n');
 
 end
