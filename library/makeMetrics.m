@@ -1,17 +1,22 @@
-function do4_makeMetrics(Measurements)
+function makeMetrics
 
-if nargin < 1
-    load('Measurements'); %#ok<LOAD>
-end
+% load Measurements structure
+load('Measurements.mat'); %#ok<LOAD>
 
-nMeas = length(Measurements.Observations);
+nMeas = length(Measurements.Observations); %#ok<NODEF>
 outDir = Measurements.outDir;
 
 fprintf('Create metrics...\n');
 ticAll = tic;
+nProc = 0; % init number of processed files
 for iMeas = 1:nMeas
+    ticItem = tic;
     fileName = Measurements.Observations(iMeas).fileName;
     
+    if Measurements.Observations(iMeas).doneMetrics
+        continue
+    end
+
     % report progress
     fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
@@ -238,26 +243,29 @@ for iMeas = 1:nMeas
         saveFigure(fig, outpath, ftype);
     end
     close(fig);
+
+    % increment number of processed files
+    nProc = nProc+1;
+
+    % set flag
+    Measurements.Observations(iMeas).doneMetrics = 1;
+
+    % export Measurements structure to base workspace
+    fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
+    assignin('base', 'Measurements', Measurements);
+
+    % save Measurements structure to MAT file
+    fprintf('\t\t- Saving Measurements structure to MAT file...\n');
+    save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
+
+    fprintf('\t\t- Saving Observations to table...\n');
+    MeasurementTable = struct2table(Measurements.Observations);
+    outpath = fullfile(outDir, 'Observations.xlsx');
+    writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
+
+    fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
-sprintf('Finished in %f s\n\n', toc(ticAll));
 
-%% Saving table
-
-fprintf('Saving Observations to table...\n');
-MeasurementTable = struct2table(Measurements.Observations);
-outpath = fullfile(outDir, 'Observations.xlsx');
-writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
-
-%% Export Measurements structure to base workspace
-
-assignin('base', 'Measurements', Measurements);
-
-%% Save Measurements structure to MAT file
-
-fprintf('Saving Measurements to MAT file...\n');
-save('Measurements', 'Measurements');
-fprintf('Moving Measurements.mat to output folder...\n');
-movefile('Measurements.mat', outDir);
-fprintf('DONE\n\n');
+fprintf('Finished creating metrics from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
 
 end

@@ -1,8 +1,7 @@
-function do3_makeData(Measurements)
+function makeData
 
-if nargin < 1
-    load('Measurements'); %#ok<LOAD>
-end
+% load Measurements structure
+load('Measurements.mat'); %#ok<LOAD>
 
 gapMargin = 0.1; % margin around gaps in seconds, because there the COP is distorted
 LoadThresh = 20; % threshold below which forces are set to zero [N]
@@ -10,18 +9,23 @@ InitForce = 200; % force threshold to cross to start trial [N]
 InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
 HumFreq = 50; % humming frequency in Hz
 
-dataDir = Measurements.dataDir;
+inDir = Measurements.inDir; %#ok<NODEF>
 outDir = Measurements.outDir;
 nMeas = length(Measurements.Observations);
 
 fprintf('Extract measurement data...\n');
 ticAll = tic;
-Measurements.Data(nMeas, 1) = struct;
+nProc = 0; % init number of processed files
 for iMeas = 1:nMeas
+    ticItem = tic;
     fileName = Measurements.Observations(iMeas).fileName;
-    fpath = fullfile(dataDir, fileName);
+    fpath = fullfile(inDir, fileName);
     task = Measurements.Observations(iMeas).task;
     side = Measurements.Observations(iMeas).side;
+
+    if Measurements.Observations(iMeas).doneData
+        continue
+    end
 
     % report progress
     fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
@@ -80,11 +84,11 @@ for iMeas = 1:nMeas
 
     gapMarginSmp = round(gapMargin * sampleRate); % gap margin in samples
     % find the beginnings of each gap
-    gapStart = [-1, find(idxGaps)];   
+    gapStart = [-1, find(idxGaps)];
     dGapStart = [1, diff(gapStart)];
     gapStart(dGapStart == 1) = [];
     % find the endings of the gaps
-    gapStop = [find(idxGaps), nSamples+2]; 
+    gapStop = [find(idxGaps), nSamples+2];
     dGapStop = [diff(gapStop), 1];
     gapStop(dGapStop == 1) = [];
     % enlarge the gaps by margin
@@ -207,17 +211,24 @@ for iMeas = 1:nMeas
         saveFigure(fig, outpath, ftype);
     end
     close(fig);
+
+    % increment number of processed files
+    nProc = nProc+1;
+
+    % set flag
+    Measurements.Observations(iMeas).doneData = 1;
+
+    % export Measurements structure to base workspace
+    fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
+    assignin('base', 'Measurements', Measurements);
+
+    % save Measurements structure to MAT file
+    fprintf('\t\t- Saving Measurements structure to MAT file...\n');
+    save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
+
+    fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
-sprintf('Finished in %f s\n\n', toc(ticAll));
 
-%% Export Measurements structure to base workspace
-
-assignin('base', 'Measurements', Measurements);
-
-%% Save Measurements structure to MAT file
-
-fprintf('Saving Measurements to MAT file...\n');
-save('Measurements', 'Measurements');
-fprintf('DONE\n\n');
+fprintf('Finished extracting data from %d files in %.3f s\n\n', nProc, toc(ticAll));
 
 end
