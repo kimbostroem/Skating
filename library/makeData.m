@@ -1,7 +1,7 @@
 function makeData
 
-% load Measurements structure
-load('Measurements.mat'); %#ok<LOAD>
+% load current state
+loadState;
 
 gapMargin = 0.1; % margin around gaps in seconds, because there the COP is distorted
 LoadThresh = 20; % threshold below which forces are set to zero [N]
@@ -165,9 +165,8 @@ for iMeas = 1:nMeas
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
 
-% save Measurements structure to MAT file
-fprintf('\t\t- Saving Measurements structure to MAT file...\n');
-save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
+% save current state
+saveState;
 
 fprintf('Finished extracting data from %d files in %.3f s\n\n', nProc, toc(ticAll));
 

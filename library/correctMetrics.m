@@ -1,7 +1,7 @@
 function correctMetrics
 
-% load Measurements structure
-load('Measurements.mat'); %#ok<LOAD>
+% load current state
+loadState;
 
 nMeas = length(Measurements.Observations); %#ok<NODEF>
 outDir = '.';
@@ -59,13 +59,6 @@ for iMeas = 1:nMeas
     Measurements.Observations(iMeas).targetError = targetError;
 end
 
-% save Measurements structure to MAT file
-fprintf('\t\t- Saving Measurements structure to MAT file...\n');
-save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
-
-fprintf('\t\t- Saving Observations to table...\n');
-MeasurementTable = struct2table(Measurements.Observations);
-outpath = fullfile(outDir, 'Observations.xlsx');
-writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
+saveState;
 
 end

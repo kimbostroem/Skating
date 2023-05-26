@@ -25,7 +25,7 @@ addpath(outDir);
 
 response = 'n';
 if isfile(fullfile(outDir, 'Measurements.mat'))
-    response = input('Measurements.mat already exists in output folder.\nDo you want to load it and continue from where you left? ([y]/n)\n', 's');
+    response = input('Measurements.mat already exists in output folder.\nDo you want to load it and continue from where you left? ([y]/n) ', 's');
     if strcmp(response, 'n') % user wants to restart from scratch
         fprintf('\nAlright, let''s ditch the file and restart from scratch!\n\n');
     else
@@ -87,8 +87,8 @@ if strcmp(response, 'n') % user wants to restart from scratch
             continue
         end
 
-        % report progress
-        fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
+        % % report progress
+        % fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
         % split file name at underscores
         parts = strsplit(fileName, '_');
@@ -170,6 +170,7 @@ if strcmp(response, 'n') % user wants to restart from scratch
         % set flags
         Measurements.Observations(iMeas).doneData = 0;
         Measurements.Observations(iMeas).doneMetrics = 0;
+        Measurements.Observations(iMeas).donePlots = 0;
     end
 
     % export Measurements structure to base workspace
@@ -192,6 +193,7 @@ clearvars -except Measurements
 
 makeData;
 makeMetrics;
+makePlots;
 
 
 

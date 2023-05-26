@@ -1,12 +1,12 @@
 function makePlots
 
-% load Measurements structure
-load('Measurements.mat'); %#ok<LOAD>
+% load current state
+loadState;
 
-outDir = Measurements.outDir;
+outDir = Measurements.outDir; %#ok<NODEF>
 nMeas = length(Measurements.Observations);
 
-fprintf('Extract measurement data...\n');
+fprintf('Make plots...\n');
 ticAll = tic;
 nProc = 0; % init number of processed files
 for iMeas = 1:nMeas
@@ -20,8 +20,11 @@ for iMeas = 1:nMeas
     startPos = Measurements.Data(iMeas).startPos;
     stopPos = Measurements.Data(iMeas).stopPos;
     task = Measurements.Observations(iMeas).task;
+    doneData = Measurements.Observations(iMeas).doneData;
+    doneMetrics = Measurements.Observations(iMeas).doneMetrics;
+    donePlots = Measurements.Observations(iMeas).donePlots;
 
-    if ~(Measurements.Observations(iMeas).doneData && Measurements.Observations(iMeas).doneMetrics)
+    if donePlots || ~(doneData && doneMetrics)
         continue
     end
 
@@ -216,6 +219,12 @@ for iMeas = 1:nMeas
     % global figure title
     sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
+    % increment number of processed files
+    nProc = nProc+1;
+
+    % set flag
+    Measurements.Observations(iMeas).donePlots = 1;
+
     % save figure
     ftypes = {'pdf', 'png'};
     for iType = 1:length(ftypes)
@@ -229,8 +238,14 @@ for iMeas = 1:nMeas
     end
     close(fig);
 
+    % export Measurements structure to base workspace
+    fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
+    assignin('base', 'Measurements', Measurements);
+
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
+
+saveState;
 
 fprintf('Finished plotting from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
 

@@ -1,7 +1,7 @@
 function makeMetrics
 
-% load Measurements structure
-load('Measurements.mat'); %#ok<LOAD>
+% load current state
+loadState;
 
 nMeas = length(Measurements.Observations); %#ok<NODEF>
 outDir = Measurements.outDir;
@@ -20,12 +20,14 @@ for iMeas = 1:nMeas
     % report progress
     fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
+    % get variables
     subjectWeight = Measurements.Observations(iMeas).weight;
     Time = Measurements.Data(iMeas).Time;
     Force = Measurements.Data(iMeas).Force;
     COP = Measurements.Data(iMeas).COP;
     idxContact = Measurements.Data(iMeas).idxContact;
     sampleRate = Measurements.Data(iMeas).sampleRate;
+    stopPos = Measurements.Data(iMeas).stopPos;
 
     if isempty(sampleRate)
         fprintf('\t\tEmpty dataset - skipping\n');
@@ -129,9 +131,8 @@ for iMeas = 1:nMeas
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
 
-% save Measurements structure to MAT file
-fprintf('\t\t- Saving Measurements structure to MAT file...\n');
-save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
+% save current state
+saveState;
 
 fprintf('Finished creating metrics from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
 
