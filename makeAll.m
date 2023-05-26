@@ -108,7 +108,16 @@ if strcmp(response, 'n') % user wants to restart from scratch
         stage = find(strcmp(stages, stageStr), 1, 'first');
         Measurements.Observations(iMeas).stage = stage; % store in Measurements.Observations(iMeas)
 
-        % subject properties at time of Measurements.Observations(iMeas)
+        % subject properties
+        subjectProps = {'ADHS', 'Medication'};
+        for iProp = 1:length(subjectProps)
+            propName = subjectProps{iProp};
+            propValue = Subjects.(propName)(subjectIdx);
+            Measurements.Observations(iMeas).(lower(subjectProps{iProp})) = propValue;
+        end
+
+
+        % subject properties with trailing 'I', 'II', or 'III'
         subjectProps = {'Height', 'Weight', 'Age', 'Date'};
         for iProp = 1:length(subjectProps)
             myStage = stage;
@@ -191,7 +200,8 @@ clearvars -except Measurements
 
 makeData;
 makeMetrics;
-makePlots;
+
+fprintf('If you want to generate plots, execute "makePlots"\n');
 
 
 
