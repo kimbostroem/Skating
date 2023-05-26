@@ -72,9 +72,10 @@ if strcmp(response, 'n') % user wants to restart from scratch
     dirInfo = dir(fullfile(inDir, '*.mat'));
     fdirs = {dirInfo.folder}';
     fnames = {dirInfo.name}';
-    idxContact = startsWith(fnames', {'.', '~'}) | [dirInfo.isdir];
+    idxExclude = startsWith(fnames', {'.', '~'}) | [dirInfo.isdir];
+    fnames(idxExclude) = [];
+    fdirs(idxExclude) = [];
     fpaths = strcat(fdirs, filesep, fnames);
-    fpaths(idxContact) = []; % remove folders and hidden files
     nMeas = length(fpaths);
 
     fprintf('Extract measurement info...\n');
@@ -86,9 +87,6 @@ if strcmp(response, 'n') % user wants to restart from scratch
             fprintf('\t-> Skipping invalid file %s\n', fileName);
             continue
         end
-
-        % % report progress
-        % fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
 
         % split file name at underscores
         parts = strsplit(fileName, '_');

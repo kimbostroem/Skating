@@ -10,7 +10,6 @@ InitMarg = 0.5; % additional time after crossing InitForce to start trial [s]
 HumFreq = 50; % humming frequency in Hz
 
 inDir = Measurements.inDir; %#ok<NODEF>
-outDir = Measurements.outDir;
 nMeas = length(Measurements.Observations);
 
 fprintf('Extract measurement data...\n');
@@ -20,7 +19,6 @@ for iMeas = 1:nMeas
     ticItem = tic;
     fileName = Measurements.Observations(iMeas).fileName;
     fpath = fullfile(inDir, fileName);
-    task = Measurements.Observations(iMeas).task;
     side = Measurements.Observations(iMeas).side;
 
     if Measurements.Observations(iMeas).doneData
