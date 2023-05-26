@@ -73,6 +73,10 @@ for iMeas = 1:nMeas
     Force = Force(:, 1:iStop);
     COP = COP(:, iStart:iStop+iStart-1);
     nSamples = size(Force, 2);
+    if nSamples == 0
+        fprintf('\t\tToo few samples with nonzero force -> skipping\n');
+        continue
+    end
     Time = (0:nSamples-1)/sampleRate;
 
     %% Remove non-contact phases from COP
@@ -222,12 +226,12 @@ for iMeas = 1:nMeas
     fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
     assignin('base', 'Measurements', Measurements);
 
-    % save Measurements structure to MAT file
-    fprintf('\t\t- Saving Measurements structure to MAT file...\n');
-    save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
-
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
+
+% save Measurements structure to MAT file
+fprintf('\t\t- Saving Measurements structure to MAT file...\n');
+save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
 
 fprintf('Finished extracting data from %d files in %.3f s\n\n', nProc, toc(ticAll));
 

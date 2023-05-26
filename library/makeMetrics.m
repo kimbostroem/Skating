@@ -12,7 +12,7 @@ nProc = 0; % init number of processed files
 for iMeas = 1:nMeas
     ticItem = tic;
     fileName = Measurements.Observations(iMeas).fileName;
-    
+
     if Measurements.Observations(iMeas).doneMetrics
         continue
     end
@@ -26,6 +26,12 @@ for iMeas = 1:nMeas
     COP = Measurements.Data(iMeas).COP;
     idxContact = Measurements.Data(iMeas).idxContact;
     sampleRate = Measurements.Data(iMeas).sampleRate;
+
+    if isempty(sampleRate)
+        fprintf('\t\tEmpty dataset - skipping\n');
+        continue
+    end
+
     dt = 1/sampleRate; % time step size [s]
     nSamples = Measurements.Data(iMeas).nSamples;
     task = Measurements.Observations(iMeas).task;
@@ -100,7 +106,7 @@ for iMeas = 1:nMeas
 
     %% Store data
 
-    
+
 
     %% Plot data
 
@@ -174,7 +180,7 @@ for iMeas = 1:nMeas
             xlim([Time(1), Time(end)]);
             title(sprintf('Distance to center'), 'Interpreter', 'none');
             xlabel('Time [s]');
-            ylabel('Distance [m]');            
+            ylabel('Distance [m]');
 
             % plot jerk
             iPlot = iPlot+1;
@@ -254,10 +260,6 @@ for iMeas = 1:nMeas
     fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
     assignin('base', 'Measurements', Measurements);
 
-    % save Measurements structure to MAT file
-    fprintf('\t\t- Saving Measurements structure to MAT file...\n');
-    save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
-
     fprintf('\t\t- Saving Observations to table...\n');
     MeasurementTable = struct2table(Measurements.Observations);
     outpath = fullfile(outDir, 'Observations.xlsx');
@@ -265,6 +267,10 @@ for iMeas = 1:nMeas
 
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
+
+% save Measurements structure to MAT file
+fprintf('\t\t- Saving Measurements structure to MAT file...\n');
+save(fullfile(outDir, 'Measurements.mat'), 'Measurements');
 
 fprintf('Finished creating metrics from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
 
