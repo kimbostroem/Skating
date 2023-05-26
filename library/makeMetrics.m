@@ -33,10 +33,7 @@ for iMeas = 1:nMeas
     end
 
     dt = 1/sampleRate; % time step size [s]
-    nSamples = Measurements.Data(iMeas).nSamples;
     task = Measurements.Observations(iMeas).task;
-    startPos = Measurements.Data(iMeas).startPos;
-    stopPos = Measurements.Data(iMeas).stopPos;
 
     switch task
 
@@ -48,7 +45,7 @@ for iMeas = 1:nMeas
                 targetFcn = @(x, y) polyval(coefficients, x);
                 targetDistFcn = @(x, y) abs(y - targetFcn(x, y));
             elseif strcmp(task, 'Einbein')
-                meanCOP = mean(COP, 2);
+                meanCOP = mean(COP, 2, 'omitnan');
                 targetDistFcn = @(x, y) vecnorm([x; y] - meanCOP);
             end
             targetDist = targetDistFcn(COP(1, :), COP(2, :));
@@ -61,7 +58,7 @@ for iMeas = 1:nMeas
             % path length
             pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
 
-            % mean beam distance
+            % target error
             targetError = mean(targetDist, 'omitnan');
 
             % mean jerk
@@ -99,156 +96,20 @@ for iMeas = 1:nMeas
             meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
             Measurements.Data(iMeas).Jerk = Jerk;
             Measurements.Observations(iMeas).pathLength = pathLength;
+            Measurements.Observations(iMeas).targetError = targetError;
             Measurements.Observations(iMeas).meanJerk = meanJerk;
             Measurements.Observations(iMeas).meanJerkXY = meanJerkXY;
     end
 
-
-    %% Store data
-
-
-
-    %% Plot data
-
-    % setup figure
-    nRows = 3;
-    nCols = 1;
-    iPlot = 0;
-    fig = setupFigure(nCols*400, nRows*200, fileName);
-
-    switch task
-
-        case 'Balance'
-            % plot COP path with beam
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            hold on
-            xFit = linspace(min(COP(1, :)), max(COP(1, :)), nSamples);
-            yFit = targetFcn(xFit);
-            scatter(xFit, yFit, 2, 'red', '.');
-            scatter(COP(1, :), COP(2, :), 2, 'blue');
-            title(sprintf('COP path'), 'Interpreter', 'none');
-            xlabel('x [m]');
-            ylabel('y [m]');
-            axis equal
-            legend({'Beam', 'COP'});
-
-            % plot distance to beam
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', targetDistFcn(COP(1, :), COP(2, :))');
-            hold on
-            yline(targetError, 'r');
-            yl = ylim;
-            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
-            xlim([Time(1), Time(end)]);
-            title(sprintf('Distance to beam'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Distance [m]');
-
-            % plot jerk
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', Jerk');
-            xlim([Time(1), Time(end)]);
-            title(sprintf('Jerk'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Jerk [m/s^3]');
-            legend({'x', 'y', 'z'});
-
-        case 'Einbein'
-            % plot COP path with center
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            hold on
-            scatter(COP(1, :), COP(2, :), 2, 'blue');
-            scatter(meanCOP(1), meanCOP(2), 24, 'red', 'x')
-            title(sprintf('COP path'), 'Interpreter', 'none');
-            xlabel('x [m]');
-            ylabel('y [m]');
-            axis equal
-            legend({'COP', 'center'});
-
-            % plot distance to center
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', targetDistFcn(COP(1, :), COP(2, :))');
-            hold on
-            yline(targetError, 'r');
-            yl = ylim;
-            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
-            xlim([Time(1), Time(end)]);
-            title(sprintf('Distance to center'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Distance [m]');
-
-            % plot jerk
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', Jerk');
-            xlim([Time(1), Time(end)]);
-            title(sprintf('Jerk'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Jerk [m/s^3]');
-            legend({'x', 'y', 'z'});
-
-        case 'Sprung'
-            % plot COP path with jump stop position
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            hold on
-            scatter(COP(1, :), COP(2, :), 2, 'blue');
-            scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
-            scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
-            scatter(jumpStopPos(1), jumpStopPos(2), 10, 'red', 'x')
-            xline(startPos(1), 'g');
-            xline(stopPos(1), 'r');
-            title(sprintf('COP path'), 'Interpreter', 'none');
-            xlabel('x [m]');
-            ylabel('y [m]');
-            axis equal
-            legend({'COP', 'jump start pos', 'jump stop pos', 'landing'});
-
-            % plot distance to jump stop position
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', targetDist');
-            hold on
-            xline(Time(targetIdx), 'red');
-            xlim([Time(1), Time(end)]);
-            yl = ylim;
-            text(Time(end), max(yl), sprintf('\ttargetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
-            title(sprintf('Distance from landing to jump stop pos'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Distance [m]');
-
-            % plot jerk
-            iPlot = iPlot+1;
-            subplot(nRows, nCols, iPlot);
-            plot(Time', Jerk');
-            xlim([Time(1), Time(end)]);
-            title(sprintf('Jerk'), 'Interpreter', 'none');
-            xlabel('Time [s]');
-            ylabel('Jerk [m/s^3]');
-            legend({'x', 'y', 'z'});
-
+    % mark invalid datasets
+    Measurements.Observations(iMeas).isValid = 1;
+    if pathLength == 0 % something is very wrong
+        Measurements.Observations(iMeas).isValid = 0;
+        Measurements.Observations(iMeas).pathLength = NaN;
+        Measurements.Observations(iMeas).targetError = NaN;
+        Measurements.Observations(iMeas).meanJerk = NaN;
+        Measurements.Observations(iMeas).meanJerkXY = NaN;
     end
-
-    % global figure title
-    sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
-
-    % save figure
-    ftypes = {'pdf'};
-    for iType = 1:length(ftypes)
-        ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, 'metrics');
-        if ~isfolder(myOutDir)
-            mkdir(myOutDir);
-        end
-        outpath = fullfile(myOutDir, fileName);
-        saveFigure(fig, outpath, ftype);
-    end
-    close(fig);
 
     % increment number of processed files
     nProc = nProc+1;

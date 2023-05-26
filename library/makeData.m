@@ -150,71 +150,7 @@ for iMeas = 1:nMeas
     Measurements.Data(iMeas).COP = COP;
     Measurements.Data(iMeas).idxContact = ~idxGaps;
     Measurements.Data(iMeas).startPos = startPos;
-    Measurements.Data(iMeas).stopPos = stopPos;
-
-    %% Plot data
-
-    % setup figure
-    nRows = 3;
-    nCols = 1;
-    iPlot = 0;
-    fig = setupFigure(nCols*400, nRows*200, fileName);
-
-    % plot COP path
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    scatter(COP(1, :), COP(2, :), 2, 'blue');
-    if strcmp(task, 'Sprung')
-        hold on
-        scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
-        scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
-        xline(startPos(1), 'g');
-        xline(stopPos(1), 'r');
-    end
-    title(sprintf('COP path'), 'Interpreter', 'none');
-    xlabel('x [m]');
-    ylabel('y [m]');
-    if strcmp(task, 'Sprung')
-        legend({'COP', 'jump start position', 'jump stop position'});
-    end
-    axis equal
-
-    % plot COP components
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    plot(Time', COP');
-    xlim([Time(1), Time(end)]);
-    title(sprintf('COP components'), 'Interpreter', 'none');
-    xlabel('Time [s]');
-    ylabel('Position [m]');
-    legend({'x', 'y'});
-
-    % plot GRF
-    iPlot = iPlot+1;
-    subplot(nRows, nCols, iPlot);
-    hold on
-    plot(Time', Force');
-    title(sprintf('Ground reaction force'), 'Interpreter', 'none');
-    legend({'x', 'y', 'z'});
-    xlabel('Time [s]');
-    ylabel('Force [N]');
-    xlim([Time(1), Time(end)]);
-
-    % global figure title
-    sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
-
-    % save figure
-    ftypes = {'pdf'};
-    for iType = 1:length(ftypes)
-        ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, 'data');
-        if ~isfolder(myOutDir)
-            mkdir(myOutDir);
-        end
-        outpath = fullfile(myOutDir, fileName);
-        saveFigure(fig, outpath, ftype);
-    end
-    close(fig);
+    Measurements.Data(iMeas).stopPos = stopPos;    
 
     % increment number of processed files
     nProc = nProc+1;
