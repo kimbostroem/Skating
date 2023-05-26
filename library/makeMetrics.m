@@ -238,10 +238,10 @@ for iMeas = 1:nMeas
     sgtitle(sprintf('%s', fileName), 'Interpreter', 'none');
 
     % save figure
-    ftypes = {'png', 'pdf', 'fig'};
+    ftypes = {'pdf'};
     for iType = 1:length(ftypes)
         ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, 'metrics', ftype);
+        myOutDir = fullfile(outDir, 'metrics');
         if ~isfolder(myOutDir)
             mkdir(myOutDir);
         end
