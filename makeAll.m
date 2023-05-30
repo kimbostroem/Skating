@@ -1,27 +1,4 @@
-% clear workspace
-clear
-close all
-
-inDir = fullfile('..', 'Skating_In');
-outDir = fullfile('..', 'Skating_Out');
-paramDir = fullfile('..', 'Skating_In');
-
-if ~isfolder(inDir)
-    inDir = uigetdir('..', 'Select input folder');
-end
-if ~isfolder(outDir)
-    outDir = uigetdir('..', 'Select input folder');
-end
-if ~isfolder(paramDir)
-    paramDir = uigetdir('..', 'Select parameter folder');
-end
-
-% restore default path
-restoredefaultpath;
-% add library and subfolders to path
-addpath(genpath('library'));
-% add output folder to path
-addpath(outDir);
+init;
 
 response = 'n';
 if isfile(fullfile(outDir, 'Measurements.mat'))
@@ -92,7 +69,7 @@ if strcmp(response, 'n') % user wants to restart from scratch
         parts = strsplit(fileName, '_');
 
         % subject identity and code
-        subjectName = parts{1};
+        subject = parts{1};
         subjectCode = [parts{1}, '_', parts{2}];
         subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
         [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
@@ -100,7 +77,7 @@ if strcmp(response, 'n') % user wants to restart from scratch
             warning('Subject code %s not found -> skipping', subjectCode);
             continue
         end
-        Measurements.Observations(iMeas).subjectName = string(subjectName); % store in Measurements.Observations(iMeas)
+        Measurements.Observations(iMeas).subject = string(subject); % store in Measurements.Observations(iMeas)
         Measurements.Observations(iMeas).subjectCode = string(subjectCode);
 
         % stage
@@ -133,7 +110,7 @@ if strcmp(response, 'n') % user wants to restart from scratch
         end
 
         % intervention
-        [~, subjectStages] = find(contains(subjectCodes, subjectName));
+        [~, subjectStages] = find(contains(subjectCodes, subject));
         switch stageStr
             case 'I'
                 intervention = 0;

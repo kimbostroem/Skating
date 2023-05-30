@@ -4,6 +4,7 @@ function makeMetrics
 loadState;
 
 nMeas = length(Measurements.Observations); %#ok<NODEF>
+outDir = Measurements.outDir;
 
 fprintf('Create metrics...\n');
 ticAll = tic;
@@ -120,7 +121,12 @@ for iMeas = 1:nMeas
 
     % export Measurements structure to base workspace
     fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
-    assignin('base', 'Measurements', Measurements);    
+    assignin('base', 'Measurements', Measurements);
+
+    fprintf('\t\t- Saving Observations to table...\n');
+    MeasurementTable = struct2table(Measurements.Observations);
+    outpath = fullfile(outDir, 'Observations.xlsx');
+    writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
 
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
