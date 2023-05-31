@@ -22,6 +22,7 @@ SourceTable = SourceTable(rows, :);
 % remove rows where "isValid" equals zero
 rows =  (cell2mat(SourceTable.isValid) == 1);
 SourceTable = SourceTable(rows, :);
+SourceTable = removevars(SourceTable, {'isValid'});
 CleanTable = SourceTable;
 
 %% create long mean table
@@ -61,7 +62,7 @@ for iSubject = 1:length(subjects)
             tableRow.([depVar, '_std']) = value;
             tableRow.([depVar, '_n']) = length(values);
         end
-        tableRow = removevars(tableRow, {'trial', 'side', 'fileName', 'isValid'});
+        tableRow = removevars(tableRow, {'trial', 'side', 'fileName'});
         LongTable = [LongTable; tableRow]; %#ok<AGROW>
     end
 end
@@ -148,18 +149,18 @@ WideTable = removevars(WideTable, myRmVars);
 
 % write original table
 fprintf('Saving observations to table...\n');
-saveTable(OrigTable, 'Observations_orig', {'xlsx', 'csv'}, outDir);
+saveTable(OrigTable, 'Observations_orig', {'xlsx'}, outDir);
 
 % write clean table
 fprintf('Saving clean observations to table...\n');
-saveTable(CleanTable, 'Observations_clean', {'xlsx', 'csv'}, outDir);
+saveTable(CleanTable, 'Observations_clean', {'csv'}, outDir);
 
 % write mean table
 fprintf('Saving averaged observations in long format to table...\n');
-saveTable(LongTable, 'Observations_long', {'xlsx', 'csv'}, outDir);
+saveTable(LongTable, 'Observations_long', {'csv'}, outDir);
 
 % write wide table
 fprintf('Saving averaged observations in wide format to table...\n');
-saveTable(WideTable, 'Observations_wide', {'xlsx', 'csv'}, outDir);
+saveTable(WideTable, 'Observations_wide', {'csv'}, outDir);
 
 end
