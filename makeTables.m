@@ -145,6 +145,8 @@ LongTable = removevars(LongTable, myRmVars);
 myRmVars = intersect(WideTable.Properties.VariableNames, rmVars);
 WideTable = removevars(WideTable, myRmVars);
 
+
+
 %% save tables
 
 % write original table
