@@ -1,2 +1,3 @@
+outDir = evalin('base', 'outDir');
 % load Measurements structure
-load('Measurements.mat'); 
+load(fullfile(outDir, 'Measurements.mat')); 

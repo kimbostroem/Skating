@@ -1,15 +1,16 @@
 function CogTable = makeCogTable
 
 inDir = '../Skating_In';
+warning('OFF', 'MATLAB:table:ModifiedAndSavedVarnames');
 
 cogFile = 'Kognitiv.xlsx';
 cogPath = fullfile(inDir, cogFile);
-opts = detectImportOptions(cogPath, 'VariableNamesRange', '3:3');
+opts = detectImportOptions(cogPath, 'VariableNamesRange', '3:3', 'VariableNamingRule', 'modify');
 CogTable = readtable(cogPath, opts);
 
 subjectsFile = 'Subjects.xlsx';
 subjectsPath = fullfile(inDir, subjectsFile);
-opts = detectImportOptions(subjectsPath, 'VariableNamesRange', '1:1');
+opts = detectImportOptions(subjectsPath, 'VariableNamesRange', '1:1', 'VariableNamingRule', 'modify');
 Subjects = readtable(subjectsPath, opts);
 
 variables_orig = CogTable.Properties.VariableNames;
