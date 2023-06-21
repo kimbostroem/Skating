@@ -1,28 +1,30 @@
-function makeMetrics
+function makeMotorMetrics()
 
-paramDir = evalin('base', 'paramDir');
+outDir = evalin('base', 'outDir');
 
 % load current state
-loadState;
+Measurements = loadState();
 
 % load table containing subjects info
-Subjects = readtable(fullfile(paramDir, 'Subjects.xlsx'));
+Subjects = Measurements.Subjects;
 
-nFiles = length(Measurements.Data); %#ok<NODEF>
-outDir = Measurements.outDir;
+nFiles = length(Measurements.MotorData);
 
 fprintf('Create metrics...\n');
 ticAll = tic;
 iMeas = 1; 
-Measurements.Findings = struct([]);
+MotorMetrics = table;
 for iFile = 1:nFiles    
-    fileName = Measurements.Data(iFile).fileName;
+    fileName = Measurements.MotorData(iFile).fileName;
 
     % skip invalid files
     if isempty(fileName) || contains(fileName, 'ungueltig', 'IgnoreCase', true)
         fprintf('\t-> Skipping invalid file %s\n', fileName);
         continue
     end
+
+    % create empty table row
+    tableRow = table;
 
     % split file name at underscores
     parts = strsplit(fileName, '_');
@@ -36,23 +38,22 @@ for iFile = 1:nFiles
         warning('Subject code %s not found -> skipping', subjectCode);
         continue
     end
-    Measurements.Findings(iMeas).subject = string(subject);
-    Measurements.Findings(iMeas).subjectCode = string(subjectCode);
+    tableRow.Subject = string(subject);
+    tableRow.SubjectCode = string(subjectCode);
 
     % stage
     stages = {'I', 'II', 'III'};
     stageStr = parts{2};
     stage = find(strcmp(stages, stageStr), 1, 'first');
-    Measurements.Findings(iMeas).stage = stage;
+    tableRow.Stage = stage;
 
     % subject properties
     subjectProps = {'ADHS', 'Medication'};
     for iProp = 1:length(subjectProps)
         propName = subjectProps{iProp};
         propValue = Subjects.(propName)(subjectIdx);
-        Measurements.Findings(iMeas).(lower(subjectProps{iProp})) = propValue;
+        tableRow.(subjectProps{iProp}) = propValue;
     end
-
 
     % subject properties with trailing 'I', 'II', or 'III'
     subjectProps = {'Height', 'Weight', 'Age', 'Date'};
@@ -62,7 +63,7 @@ for iFile = 1:nFiles
             propName = sprintf('%s_%s', subjectProps{iProp}, stages{myStage});
             propValue = Subjects.(propName)(subjectIdx);
             if strcmp(subjectProps{iProp}, 'Date') || ~isnan(propValue)
-                Measurements.Findings(iMeas).(lower(subjectProps{iProp})) = propValue;
+                tableRow.(subjectProps{iProp}) = propValue;
                 break
             end
             myStage = myStage-1;
@@ -83,11 +84,11 @@ for iFile = 1:nFiles
         case 'III'
             intervention = 1;
     end
-    Measurements.Findings(iMeas).intervention = intervention;
+    tableRow.Intervention = intervention;
 
     % task
     task = parts{3};
-    Measurements.Findings(iMeas).task = string(task);
+    tableRow.Task = string(task);
 
     % side or Kraft
     if strcmp(parts{4}, 'Kraft')
@@ -97,34 +98,34 @@ for iFile = 1:nFiles
         side = parts{4};
         trial = parts{5};
     end
-    Measurements.Findings(iMeas).side = string(side);
+    tableRow.Side = string(side);
 
     % jump position markers
-    Measurements.Findings(iMeas).Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
-    Measurements.Findings(iMeas).Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
-    Measurements.Findings(iMeas).Einbein_start = string(Subjects.Einbein_start(subjectIdx));
-    Measurements.Findings(iMeas).Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
+    tableRow.Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
+    tableRow.Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
+    tableRow.Einbein_start = string(Subjects.Einbein_start(subjectIdx));
+    tableRow.Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
 
     % trial number
-    Measurements.Findings(iMeas).trial = str2double(trial);
+    tableRow.Trial = str2double(trial);
 
-    % store file name in Measurements.Findings(iMeas)
-    Measurements.Findings(iMeas).fileName = string(fileName);
+    % store file name in tableRow
+    tableRow.FileName = string(fileName);
 
     % set flags
-    Measurements.Findings(iMeas).donePlots = 0;    
+    tableRow.DonePlots = 0;    
 
-    % report progress
-    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iFile, nFiles, iFile/nFiles*100);
+    % % report progress
+    % fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iFile, nFiles, iFile/nFiles*100);
 
     % get variables
-    subjectWeight = Measurements.Findings(iMeas).weight;
-    Time = Measurements.Data(iFile).Time;
-    Force = Measurements.Data(iFile).Force;
-    COP = Measurements.Data(iFile).COP;
-    idxContact = Measurements.Data(iFile).idxContact;
-    sampleRate = Measurements.Data(iFile).sampleRate;
-    stopPos = Measurements.Data(iFile).stopPos;
+    subjectWeight = tableRow.Weight;
+    Time = Measurements.MotorData(iFile).Time;
+    Force = Measurements.MotorData(iFile).Force;
+    COP = Measurements.MotorData(iFile).COP;
+    idxContact = Measurements.MotorData(iFile).idxContact;
+    sampleRate = Measurements.MotorData(iFile).sampleRate;
+    stopPos = Measurements.MotorData(iFile).stopPos;
 
     if isempty(sampleRate)
         fprintf('\t\tEmpty dataset - skipping\n');
@@ -132,7 +133,7 @@ for iFile = 1:nFiles
     end
 
     dt = 1/sampleRate; % time step size [s]
-    task = Measurements.Findings(iMeas).task;
+    task = tableRow.Task;
 
     switch task
 
@@ -163,21 +164,21 @@ for iFile = 1:nFiles
             % mean jerk
             meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
             meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
-            Measurements.Data(iFile).targetDist = targetDist;
-            Measurements.Data(iFile).Jerk = Jerk;
-            Measurements.Findings(iMeas).pathLength = pathLength;
-            Measurements.Findings(iMeas).targetError = targetError;
-            Measurements.Findings(iMeas).meanJerk = meanJerk;
-            Measurements.Findings(iMeas).meanJerkXY = meanJerkXY;
+            Measurements.MotorData(iFile).targetDist = targetDist;
+            Measurements.MotorData(iFile).Jerk = Jerk;
+            tableRow.PathLength = pathLength;
+            tableRow.TargetError = targetError;
+            tableRow.MeanJerk = meanJerk;
+            tableRow.MeanJerkXY = meanJerkXY;
 
         case 'Sprung'
             % distance to jump stop position
-            targetDist = abs(Measurements.Data(iFile).COP(1, :) - stopPos(1));
+            targetDist = abs(Measurements.MotorData(iFile).COP(1, :) - stopPos(1));
             [targetError, targetIdx] = min(targetDist);
-            jumpStopPos = Measurements.Data(iFile).COP(:, targetIdx);
-            Measurements.Data(iFile).targetDist = targetDist;
-            Measurements.Findings(iMeas).targetError = targetError;
-            Measurements.Data(iFile).jumpStopPos = jumpStopPos;
+            jumpStopPos = Measurements.MotorData(iFile).COP(:, targetIdx);
+            Measurements.MotorData(iFile).targetDist = targetDist;
+            tableRow.TargetError = targetError;
+            Measurements.MotorData(iFile).jumpStopPos = jumpStopPos;
 
             % jerk
             dJerk = diff(Force, 1, 2);
@@ -193,40 +194,44 @@ for iFile = 1:nFiles
             % mean jerk
             meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
             meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
-            Measurements.Data(iFile).Jerk = Jerk;
-            Measurements.Findings(iMeas).pathLength = pathLength;
-            Measurements.Findings(iMeas).targetError = targetError;
-            Measurements.Findings(iMeas).meanJerk = meanJerk;
-            Measurements.Findings(iMeas).meanJerkXY = meanJerkXY;
+            Measurements.MotorData(iFile).Jerk = Jerk;
+            tableRow.PathLength = pathLength;
+            tableRow.TargetError = targetError;
+            tableRow.MeanJerk = meanJerk;
+            tableRow.MeanJerkXY = meanJerkXY;
     end
 
     % mark invalid datasets
-    Measurements.Findings(iMeas).isValid = 1;
+    tableRow.isValid = 1;
     if pathLength == 0 % something is very wrong
-        Measurements.Findings(iMeas).isValid = 0;
-        Measurements.Findings(iMeas).pathLength = NaN;
-        Measurements.Findings(iMeas).targetError = NaN;
-        Measurements.Findings(iMeas).meanJerk = NaN;
-        Measurements.Findings(iMeas).meanJerkXY = NaN;
+        tableRow.isValid = 0;
+        tableRow.PathLength = NaN;
+        tableRow.TargetError = NaN;
+        tableRow.MeanJerk = NaN;
+        tableRow.MeanJerkXY = NaN;
     end
+
+    % append table row to table
+    MotorMetrics = [MotorMetrics; tableRow]; %#ok<AGROW>
 
     % increment number of processed files
     iMeas = iMeas+1;    
 end
 
+% append MotorMetrics table to Measurements structure
+Measurements.MotorMetrics = MotorMetrics;
+
+fprintf('\t\t- Saving MotorMetrics to table...\n');
+outpath = fullfile(outDir, 'MotorMetrics.xlsx');
+writetable(Measurements.MotorMetrics, outpath, 'WriteMode', 'replacefile');
+
 % export Measurements structure to base workspace
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);
 
-fprintf('\t\t- Saving Findings to table...\n');
-MeasurementTable = struct2table(Measurements.Findings);
-outpath = fullfile(outDir, 'Findings.xlsx');
-writetable(MeasurementTable, outpath, 'WriteMode', 'replacefile');
-
-
 % save current state
 saveState;
 
-fprintf('Finished creating metrics from %d datasets in %.3f s\n\n', iMeas, toc(ticAll));
+fprintf('Finished creating metrics from %d datasets in %.3f s\n', iMeas, toc(ticAll));
 
 end

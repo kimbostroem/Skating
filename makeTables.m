@@ -1,9 +1,9 @@
-function makeTables
+function makeTables()
 
 init
 
 % load current state
-loadState;
+Measurements = loadState();
 
 outDir = strrep(Measurements.outDir, '\', '/');
 
@@ -24,6 +24,30 @@ rows =  (cell2mat(SourceTable.isValid) == 1);
 SourceTable = SourceTable(rows, :);
 SourceTable = removevars(SourceTable, {'isValid'});
 CleanTable = SourceTable;
+
+% % delete irrelevant columns
+% variables_orig = CognitionData.Properties.VariableNames;
+% variables_clean = [
+%     "Probandencode"
+%     "ADHS"
+%     "Stage"
+%     "Intervention"
+%     "Sex"
+%     "Age_yrs"
+%     "Height_cm"
+%     "Weight_kg"
+%     "Medikation"
+%     "AD_MW"
+%     "Hyp_MW"
+%     "D2_F__SW"
+%     "D2_BZO_SW"
+%     "D2_KL_SW"
+%     "Stroop_FWL_SW"
+%     "Stroop_FSB_SW"
+%     "Stroop_INT_SW"
+%     ];
+% idx = ~ismember(variables_orig, variables_clean);
+% CognitionData(:, idx) = [];
 
 %% create long mean table
 

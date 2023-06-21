@@ -1,6 +1,7 @@
 init;
-makeData;
-makeMetrics;
+makeMotorData;
+makeMotorMetrics;
+makeCogTable;
 makeTables;
 makePlots;
 
