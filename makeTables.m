@@ -6,13 +6,15 @@ Measurements = loadState();
 % get outDir
 outDir = evalin('base', 'outDir');
 
+%% Motor tables
+
 MotorMetrics = Measurements.MotorMetrics;
 
 conditions = {'Stage', 'Task'};
 depVars = {'PathLength', 'Fluctuation', 'Jerk', 'JerkXY'};
 subjects = unique(Measurements.Subjects.Subject);
 
-%% create clean table
+%% Clean motor table
 
 SourceTable = MotorMetrics;
 % remove empty "isValid" rows
@@ -24,34 +26,11 @@ SourceTable(rows, :) = [];
 SourceTable = removevars(SourceTable, {'isValid'});
 CleanTable = SourceTable;
 
-% % delete irrelevant columns
-% variables_orig = CognitionData.Properties.VariableNames;
-% variables_clean = [
-%     "Probandencode"
-%     "ADHS"
-%     "Stage"
-%     "Intervention"
-%     "Sex"
-%     "Age_yrs"
-%     "Height_cm"
-%     "Weight_kg"
-%     "Medikation"
-%     "AD_MW"
-%     "Hyp_MW"
-%     "D2_F__SW"
-%     "D2_BZO_SW"
-%     "D2_KL_SW"
-%     "Stroop_FWL_SW"
-%     "Stroop_FSB_SW"
-%     "Stroop_INT_SW"
-%     ];
-% idx = ~ismember(variables_orig, variables_clean);
-% CognitionData(:, idx) = [];
-
-%% create long mean table
+%% Long motor table
 
 SourceTable = CleanTable;
-LongTable = table;
+LongTable = struct([]);
+iRow = 1;
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
     subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
@@ -64,6 +43,7 @@ for iSubject = 1:length(subjects)
     nCondCombs = size(condCombs, 1);
     for iComb = 1:nCondCombs
         combTable = subjectTable;
+        % restrict combTable iteratively to match combination of conditions
         for iCond = 1:length(condCombs(iComb, :))
             cond = conditions{iCond};
             value = condCombs{iComb, iCond};
@@ -73,24 +53,35 @@ for iSubject = 1:length(subjects)
         if isempty(combTable)
             continue
         end
-        tableRow = combTable(1, :);
+        initRow = table2struct(combTable(1, :));
+        variables = setdiff(fieldnames(initRow), depVars);
+        task = initRow.Task;
+        for iVar = 1:length(variables)
+            variable = variables{iVar};
+            LongTable(iRow).(variable) = initRow.(variable);
+        end
         for iVar = 1:length(depVars)
             depVar = depVars{iVar};
             values = combTable.(depVar);
-            tableRow.(depVar) = mean(values, 'omitnan');
+            LongTable(iRow).(sprintf('%s_%s', task, depVar)) = mean(values, 'omitnan');
             value = std(values, 'omitnan');
             if value == 0
                 value = NaN;
             end
-            tableRow.([depVar, '_std']) = value;
-            tableRow.([depVar, '_n']) = length(values);
-        end
-        tableRow = removevars(tableRow, {'Trial', 'Side', 'FileName'});
-        LongTable = [LongTable; tableRow]; %#ok<AGROW>
+            LongTable(iRow).(sprintf('%s_%s_std', task, depVar)) = value;
+            LongTable(iRow).(sprintf('%s_%s_n', task, depVar)) = length(values);
+        end        
+        
+        % increment row index
+        iRow = iRow + 1;
     end
 end
+% convert structure array to table
+LongTable = struct2table(LongTable);
+% clean up
+LongTable = removevars(LongTable, {'Trial', 'Side', 'FileName'});
 
-%% create wide mean table
+%% Wide motor table
 
 prepostVar = 'Stage';
 prepostValues = [1 2];
@@ -155,7 +146,7 @@ for iSubject = 1:length(subjects)
 end
 WideTable = removevars(WideTable, {prepostVar});
 
-%% reduce tables
+%% Reduce motor tables
 
 rmVars = {'subjectCode', 'date', 'Beidbein_start', 'Beidbein_stop', 'Einbein_start', 'Einbein_stop', 'doneData', 'doneMetrics', 'donePlots'};
 % clean table
@@ -169,8 +160,48 @@ myRmVars = intersect(WideTable.Properties.VariableNames, rmVars);
 WideTable = removevars(WideTable, myRmVars);
 
 
+%% Cognitive tables
 
-%% save tables
+% % delete irrelevant columns
+% variables_orig = CognitionData.Properties.VariableNames;
+% variables_clean = [
+%     "Probandencode"
+%     "ADHS"
+%     "Stage"
+%     "Intervention"
+%     "Sex"
+%     "Age_yrs"
+%     "Height_cm"
+%     "Weight_kg"
+%     "Medikation"
+%     "AD_MW"
+%     "Hyp_MW"
+%     "D2_F__SW"
+%     "D2_BZO_SW"
+%     "D2_KL_SW"
+%     "Stroop_FWL_SW"
+%     "Stroop_FSB_SW"
+%     "Stroop_INT_SW"
+%     ];
+% idx = ~ismember(variables_orig, variables_clean);
+% CognitionData(:, idx) = [];
+
+%% Append tables to Measurements structure
+
+Measurements.CleanTable = CleanTable;
+Measurements.LongTable = LongTable;
+Measurements.WideTable = WideTable;
+
+%% save Measurements structure
+
+% export Measurements structure to base workspace
+fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
+assignin('base', 'Measurements', Measurements);
+
+% save current state
+saveState;
+
+%% save tables to disk
 
 % write original table
 fprintf('Saving observations to table...\n');

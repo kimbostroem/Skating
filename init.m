@@ -15,3 +15,5 @@ addpath(genpath('library'));
 
 % suppress warning when table headers do not conform Matlab variable name standard
 warning('OFF', 'MATLAB:table:ModifiedAndSavedVarnames');
+
+Measurements = loadState();
