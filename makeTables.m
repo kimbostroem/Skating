@@ -1,27 +1,26 @@
 function makeTables()
 
-init
-
 % load current state
 Measurements = loadState();
 
-outDir = strrep(Measurements.outDir, '\', '/');
+% get outDir
+outDir = evalin('base', 'outDir');
 
-OrigTable = struct2table(Measurements.Observations);
+MotorMetrics = Measurements.MotorMetrics;
 
-conditions = {'stage', 'task'};
-depVars = {'pathLength', 'targetError', 'meanJerk', 'meanJerkXY'};
-subjects = unique([Measurements.Observations.subject]);
+conditions = {'Stage', 'Task'};
+depVars = {'PathLength', 'Fluctuation', 'Jerk', 'JerkXY'};
+subjects = unique(Measurements.Subjects.Subject);
 
 %% create clean table
 
-SourceTable = OrigTable;
+SourceTable = MotorMetrics;
 % remove empty "isValid" rows
-rows = ~cellfun(@isempty,SourceTable.isValid);
-SourceTable = SourceTable(rows, :);
+rows = isempty(SourceTable.isValid);
+SourceTable(rows, :) = [];
 % remove rows where "isValid" equals zero
-rows =  (cell2mat(SourceTable.isValid) == 1);
-SourceTable = SourceTable(rows, :);
+rows = (SourceTable.isValid == 0);
+SourceTable(rows, :) = [];
 SourceTable = removevars(SourceTable, {'isValid'});
 CleanTable = SourceTable;
 
@@ -55,7 +54,7 @@ SourceTable = CleanTable;
 LongTable = table;
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
-    subjectTable = SourceTable(SourceTable.subject == string(subject), :);
+    subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
     levels = cell(1, length(conditions));
     for iCond = 1:length(conditions)
         condition = conditions{iCond};
@@ -77,7 +76,7 @@ for iSubject = 1:length(subjects)
         tableRow = combTable(1, :);
         for iVar = 1:length(depVars)
             depVar = depVars{iVar};
-            values = cell2mat(combTable.(depVar));
+            values = combTable.(depVar);
             tableRow.(depVar) = mean(values, 'omitnan');
             value = std(values, 'omitnan');
             if value == 0
@@ -86,14 +85,14 @@ for iSubject = 1:length(subjects)
             tableRow.([depVar, '_std']) = value;
             tableRow.([depVar, '_n']) = length(values);
         end
-        tableRow = removevars(tableRow, {'trial', 'side', 'fileName'});
+        tableRow = removevars(tableRow, {'Trial', 'Side', 'FileName'});
         LongTable = [LongTable; tableRow]; %#ok<AGROW>
     end
 end
 
 %% create wide mean table
 
-prepostVar = 'stage';
+prepostVar = 'Stage';
 prepostValues = [1 2];
 conditions = setdiff(conditions, prepostVar);
 newDepVars = depVars;
@@ -107,7 +106,7 @@ SourceTable = LongTable;
 WideTable = table;
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
-    subjectTable = SourceTable(SourceTable.subject == string(subject), :);
+    subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
     levels = cell(1, length(conditions));
     for iCond = 1:length(conditions)
         condition = conditions{iCond};
@@ -175,7 +174,7 @@ WideTable = removevars(WideTable, myRmVars);
 
 % write original table
 fprintf('Saving observations to table...\n');
-saveTable(OrigTable, 'Observations_orig', {'xlsx'}, outDir);
+saveTable(MotorMetrics, 'Observations_orig', {'xlsx'}, outDir);
 
 % write clean table
 fprintf('Saving clean observations to table...\n');

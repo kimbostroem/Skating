@@ -1,9 +1,10 @@
 function makeMotorMetrics()
 
-outDir = evalin('base', 'outDir');
-
 % load current state
 Measurements = loadState();
+
+% get outDir
+outDir = evalin('base', 'outDir');
 
 % load table containing subjects info
 Subjects = Measurements.Subjects;
@@ -12,8 +13,8 @@ nFiles = length(Measurements.MotorData);
 
 fprintf('Create metrics...\n');
 ticAll = tic;
-iMeas = 1; 
-MotorMetrics = table;
+item = 1; 
+MotorMetrics = struct([]);
 for iFile = 1:nFiles    
     fileName = Measurements.MotorData(iFile).fileName;
 
@@ -22,9 +23,6 @@ for iFile = 1:nFiles
         fprintf('\t-> Skipping invalid file %s\n', fileName);
         continue
     end
-
-    % create empty table row
-    tableRow = table;
 
     % split file name at underscores
     parts = strsplit(fileName, '_');
@@ -38,21 +36,21 @@ for iFile = 1:nFiles
         warning('Subject code %s not found -> skipping', subjectCode);
         continue
     end
-    tableRow.Subject = string(subject);
-    tableRow.SubjectCode = string(subjectCode);
+    MotorMetrics(item).Subject = string(subject);
+    MotorMetrics(item).SubjectCode = string(subjectCode);
 
     % stage
     stages = {'I', 'II', 'III'};
     stageStr = parts{2};
     stage = find(strcmp(stages, stageStr), 1, 'first');
-    tableRow.Stage = stage;
+    MotorMetrics(item).Stage = stage;
 
     % subject properties
     subjectProps = {'ADHS', 'Medication'};
     for iProp = 1:length(subjectProps)
         propName = subjectProps{iProp};
         propValue = Subjects.(propName)(subjectIdx);
-        tableRow.(subjectProps{iProp}) = propValue;
+        MotorMetrics(item).(subjectProps{iProp}) = propValue;
     end
 
     % subject properties with trailing 'I', 'II', or 'III'
@@ -63,7 +61,7 @@ for iFile = 1:nFiles
             propName = sprintf('%s_%s', subjectProps{iProp}, stages{myStage});
             propValue = Subjects.(propName)(subjectIdx);
             if strcmp(subjectProps{iProp}, 'Date') || ~isnan(propValue)
-                tableRow.(subjectProps{iProp}) = propValue;
+                MotorMetrics(item).(subjectProps{iProp}) = propValue;
                 break
             end
             myStage = myStage-1;
@@ -84,11 +82,11 @@ for iFile = 1:nFiles
         case 'III'
             intervention = 1;
     end
-    tableRow.Intervention = intervention;
+    MotorMetrics(item).Intervention = intervention;
 
     % task
     task = parts{3};
-    tableRow.Task = string(task);
+    MotorMetrics(item).Task = string(task);
 
     % side or Kraft
     if strcmp(parts{4}, 'Kraft')
@@ -98,28 +96,28 @@ for iFile = 1:nFiles
         side = parts{4};
         trial = parts{5};
     end
-    tableRow.Side = string(side);
+    MotorMetrics(item).Side = string(side);
 
     % jump position markers
-    tableRow.Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
-    tableRow.Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
-    tableRow.Einbein_start = string(Subjects.Einbein_start(subjectIdx));
-    tableRow.Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
+    MotorMetrics(item).Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
+    MotorMetrics(item).Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
+    MotorMetrics(item).Einbein_start = string(Subjects.Einbein_start(subjectIdx));
+    MotorMetrics(item).Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
 
     % trial number
-    tableRow.Trial = str2double(trial);
+    MotorMetrics(item).Trial = str2double(trial);
 
-    % store file name in tableRow
-    tableRow.FileName = string(fileName);
+    % store file name in MotorMetrics(item)
+    MotorMetrics(item).FileName = string(fileName);
 
     % set flags
-    tableRow.DonePlots = 0;    
+    MotorMetrics(item).DonePlots = 0;    
 
     % % report progress
     % fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iFile, nFiles, iFile/nFiles*100);
 
     % get variables
-    subjectWeight = tableRow.Weight;
+    subjectWeight = MotorMetrics(item).Weight;
     Time = Measurements.MotorData(iFile).Time;
     Force = Measurements.MotorData(iFile).Force;
     COP = Measurements.MotorData(iFile).COP;
@@ -133,93 +131,75 @@ for iFile = 1:nFiles
     end
 
     dt = 1/sampleRate; % time step size [s]
-    task = tableRow.Task;
+    % task = MotorMetrics(item).Task;
 
     switch task
 
         case {'Balance', 'Einbein'}
 
             if strcmp(task, 'Balance')
-                % distance to beam (for task "Balance")
-                coefficients = polyfit(COP(1, idxContact), COP(2, idxContact), 1);
+                % Calc distance to beam for task "Balance". The beam is
+                % parallel to the x-axis, therefore fit a polynom of 0th
+                % order (constant function)
+                polyOrder = 0;
+                coefficients = polyfit(COP(1, idxContact), COP(2, idxContact), polyOrder);
                 targetFcn = @(x, y) polyval(coefficients, x);
-                targetDistFcn = @(x, y) abs(y - targetFcn(x, y));
+                deviationFcn = @(x, y) abs(y - targetFcn(x, y));                
             elseif strcmp(task, 'Einbein')
                 meanCOP = mean(COP, 2, 'omitnan');
-                targetDistFcn = @(x, y) vecnorm([x; y] - meanCOP);
+                deviationFcn = @(x, y) vecnorm([x; y] - meanCOP);
             end
-            targetDist = targetDistFcn(COP(1, :), COP(2, :));
-
-            % jerk
-            dJerk = diff(Force, 1, 2);
-            Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
-            Jerk(:, ~idxContact) = 0; % remove jerk around gaps
-
-            % path length
-            pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
-
-            % target error
-            targetError = mean(targetDist, 'omitnan');
-
-            % mean jerk
-            meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
-            meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
-            Measurements.MotorData(iFile).targetDist = targetDist;
-            Measurements.MotorData(iFile).Jerk = Jerk;
-            tableRow.PathLength = pathLength;
-            tableRow.TargetError = targetError;
-            tableRow.MeanJerk = meanJerk;
-            tableRow.MeanJerkXY = meanJerkXY;
+            deviation = deviationFcn(COP(1, :), COP(2, :));
+            fluctuation = mean(deviation, 'omitnan');
 
         case 'Sprung'
             % distance to jump stop position
-            targetDist = abs(Measurements.MotorData(iFile).COP(1, :) - stopPos(1));
-            [targetError, targetIdx] = min(targetDist);
+            deviation = abs(Measurements.MotorData(iFile).COP(1, :) - stopPos(1));
+            [fluctuation, targetIdx] = min(deviation);
             jumpStopPos = Measurements.MotorData(iFile).COP(:, targetIdx);
-            Measurements.MotorData(iFile).targetDist = targetDist;
-            tableRow.TargetError = targetError;
             Measurements.MotorData(iFile).jumpStopPos = jumpStopPos;
-
-            % jerk
-            dJerk = diff(Force, 1, 2);
-            Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
-            Jerk(:, ~idxContact) = 0; % remove jerk around gaps
-
-            % path length
-            pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
-
-            % mean beam distance
-            targetError = mean(targetDist, 'omitnan');
-
-            % mean jerk
-            meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
-            meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
-            Measurements.MotorData(iFile).Jerk = Jerk;
-            tableRow.PathLength = pathLength;
-            tableRow.TargetError = targetError;
-            tableRow.MeanJerk = meanJerk;
-            tableRow.MeanJerkXY = meanJerkXY;
     end
+
+    % jerk
+    dJerk = diff(Force, 1, 2);
+    Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
+    Jerk(:, ~idxContact) = 0; % remove jerk around gaps
+
+    % path length
+    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
+
+    fluctuationName = 'Fluctuation';
+
+    % mean jerk
+    meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
+    meanJerkName = 'Jerk';
+    meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
+    meanJerkXYName = 'JerkXY';
+
+    % store metrics in structure
+    Measurements.MotorData(iFile).Deviation = deviation;
+    Measurements.MotorData(iFile).Jerk = Jerk;
+    MotorMetrics(item).PathLength = pathLength;
+    MotorMetrics(item).(fluctuationName) = fluctuation;
+    MotorMetrics(item).(meanJerkName) = meanJerk;
+    MotorMetrics(item).(meanJerkXYName) = meanJerkXY;
 
     % mark invalid datasets
-    tableRow.isValid = 1;
+    MotorMetrics(item).isValid = 1;
     if pathLength == 0 % something is very wrong
-        tableRow.isValid = 0;
-        tableRow.PathLength = NaN;
-        tableRow.TargetError = NaN;
-        tableRow.MeanJerk = NaN;
-        tableRow.MeanJerkXY = NaN;
+        MotorMetrics(item).isValid = 0;
+        MotorMetrics(item).PathLength = NaN;
+        MotorMetrics(item).(fluctuationName) = NaN;
+        MotorMetrics(item).(meanJerkName) = NaN;
+        MotorMetrics(item).(meanJerkXYName) = NaN;
     end
 
-    % append table row to table
-    MotorMetrics = [MotorMetrics; tableRow]; %#ok<AGROW>
-
     % increment number of processed files
-    iMeas = iMeas+1;    
+    item = item+1;    
 end
 
 % append MotorMetrics table to Measurements structure
-Measurements.MotorMetrics = MotorMetrics;
+Measurements.MotorMetrics = struct2table(MotorMetrics);
 
 fprintf('\t\t- Saving MotorMetrics to table...\n');
 outpath = fullfile(outDir, 'MotorMetrics.xlsx');
@@ -232,6 +212,6 @@ assignin('base', 'Measurements', Measurements);
 % save current state
 saveState;
 
-fprintf('Finished creating metrics from %d datasets in %.3f s\n', iMeas, toc(ticAll));
+fprintf('Finished creating metrics from %d datasets in %.3f s\n', item, toc(ticAll));
 
 end

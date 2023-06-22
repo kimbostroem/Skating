@@ -15,6 +15,7 @@ subjectVar = "Probandencode";
 idx = ~cell2mat(cellfun(@(x) startsWith(x, subjectCodes), CognitionData.(subjectVar), 'un', 0));
 CognitionData(idx,:) = [];
 
+
 % append CognitionData to Measurements structure
 Measurements.CognitionData = CognitionData;
 

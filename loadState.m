@@ -1,4 +1,8 @@
-function Measurements = loadState
+function Measurements = loadState()
+
+if ~evalin('base','exist(''outDir'')')
+    evalin('base', 'init');
+end
 
 outDir = evalin('base', 'outDir');
 
