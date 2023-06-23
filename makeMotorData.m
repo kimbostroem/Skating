@@ -1,5 +1,8 @@
 function makeMotorData()
 
+fprintf('\nMaking Motor Data...\n');
+
+
 motorDir = evalin('base', 'motorDir');
 
 % load current state
@@ -50,7 +53,6 @@ for iFile = 1:nFiles
     subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
     [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
     if isempty(subjectIdx)
-        warning('Subject code %s not found -> skipping', subjectCode);
         continue
     end
 

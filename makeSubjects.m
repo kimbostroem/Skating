@@ -1,5 +1,7 @@
 function makeSubjects
 
+fprintf('\nMaking Subjects...\n');
+
 % load current state
 Measurements = loadState();
 

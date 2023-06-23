@@ -1,9 +1,10 @@
 init;
+makeSubjects;
 makeMotorData;
 makeMotorMetrics;
-makeCogTable;
+makeCognitionData;
 makeTables;
-makePlots;
+% makePlots;
 
 
 

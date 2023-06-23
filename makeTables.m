@@ -1,5 +1,8 @@
 function makeTables()
 
+fprintf('\nMaking Tables...\n');
+
+
 % load current state
 Measurements = loadState();
 
@@ -10,7 +13,6 @@ outDir = evalin('base', 'outDir');
 
 MotorMetrics = Measurements.MotorMetrics;
 
-conditions = {'Stage', 'Task'};
 depVars = {'PathLength', 'Fluctuation', 'Jerk', 'JerkXY'};
 subjects = unique(Measurements.Subjects.Subject);
 
@@ -24,173 +26,227 @@ SourceTable(rows, :) = [];
 rows = (SourceTable.isValid == 0);
 SourceTable(rows, :) = [];
 SourceTable = removevars(SourceTable, {'isValid'});
-CleanTable = SourceTable;
+MotorTable_all = SourceTable;
+% remove unnecessary variables
+rmVars = {'subjectCode', 'date', 'Beidbein_start', 'Beidbein_stop', 'Einbein_start', 'Einbein_stop'};
+myRmVars = intersect(MotorTable_all.Properties.VariableNames, rmVars);
+MotorTable_all = removevars(MotorTable_all, myRmVars);
 
-%% Long motor table
+%% Motor table in long format (pre and post values in rows)
 
-SourceTable = CleanTable;
-LongTable = struct([]);
+tasks = unique(MotorTable_all.Task);
+stages = unique(MotorTable_all.Stage);
+
+SourceTable = MotorTable_all;
+TargetTable = struct([]);
+iRow = 1;
+newDepVars = {};
+for iSubject = 1:length(subjects)
+    subject = subjects{iSubject};
+    subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
+    for iStage = 1:length(stages)
+        stage = stages(iStage);
+        stageTable = subjectTable(subjectTable.Stage == stage, :);
+        if isempty(stageTable)
+            continue
+        end
+        for iTask = 1:length(tasks)
+            task = tasks{iTask};
+            taskTable = stageTable(stageTable.Task == task, :);
+            if isempty(taskTable)
+                continue
+            end
+            initRow = table2struct(taskTable(1, :));
+            variables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
+            for iVar = 1:length(variables)
+                variable = variables{iVar};
+                TargetTable(iRow).(variable) = initRow.(variable);
+            end
+            for iVar = 1:length(depVars)
+                depVar = depVars{iVar};
+                values = taskTable.(depVar);
+                newDepVar = sprintf('%s_%s', task, depVar);
+                newDepVars = union(newDepVars, {newDepVar}, 'stable');
+                TargetTable(iRow).(newDepVar) = mean(values, 'omitnan');
+                value = std(values, 'omitnan');
+                if value == 0
+                    value = NaN;
+                end
+                newDepVar = sprintf('%s_%s_std', task, depVar);
+                newDepVars = union(newDepVars, {newDepVar}, 'stable');
+                TargetTable(iRow).(newDepVar) = value;
+                newDepVar = sprintf('%s_%s_n', task, depVar);
+                newDepVars = union(newDepVars, {newDepVar}, 'stable');
+                TargetTable(iRow).(newDepVar) = length(values);
+            end
+        end
+        % increment row index
+        iRow = iRow + 1;
+    end
+end
+% update list of dependent variables
+depVars = newDepVars;
+% convert structure array to table
+TargetTable = struct2table(TargetTable);
+% clean up
+TargetTable = removevars(TargetTable, {'Trial', 'Side', 'FileName'});
+MotorTable_long = TargetTable;
+
+%% Motor table in wide format (pre and post values in columns)
+
+SourceTable = MotorTable_long;
+TargetTable = struct([]);
 iRow = 1;
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
     subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
-    levels = cell(1, length(conditions));
-    for iCond = 1:length(conditions)
-        condition = conditions{iCond};
-        levels{iCond} = unique(subjectTable.(condition));
+    if isempty(subjectTable)
+        continue
     end
-    condCombs = table2cell(combinations(levels{:}));
-    nCondCombs = size(condCombs, 1);
-    for iComb = 1:nCondCombs
-        combTable = subjectTable;
-        % restrict combTable iteratively to match combination of conditions
-        for iCond = 1:length(condCombs(iComb, :))
-            cond = conditions{iCond};
-            value = condCombs{iComb, iCond};
-            rows = (combTable.(cond) == value);
-            combTable = combTable(rows, :);
+    initRow = table2struct(subjectTable(1, :));
+    variables = setdiff(fieldnames(initRow), [depVars, {'Stage'}], 'stable');
+    for iVar = 1:length(variables)
+        variable = variables{iVar};
+        TargetTable(iRow).(variable) = initRow.(variable);
+    end
+    for iVar = 1:length(depVars)
+        depVar = depVars{iVar};
+        value = subjectTable.(depVar)(subjectTable.Stage == stages(1));
+        if isempty(value)
+            value = NaN;
         end
-        if isempty(combTable)
+        TargetTable(iRow).([depVar, '_pre']) = value;
+        value = subjectTable.(depVar)(subjectTable.Stage == stages(2));
+        if isempty(value)
+            value = NaN;
+        end
+        TargetTable(iRow).([depVar, '_post']) = value;
+    end
+    % increment row index
+    iRow = iRow + 1;
+end
+% convert structure array to table
+TargetTable = struct2table(TargetTable);
+MotorTable_wide = TargetTable;
+
+
+%% Cognition tables
+
+CognitionTable_all = Measurements.CognitionData;
+
+% delete irrelevant columns
+variables_orig = CognitionTable_all.Properties.VariableNames;
+variables_clean = [
+    "Subject"
+    "ADHS"
+    "Stage"
+    "Intervention"
+    "Sex"
+    "Age_yrs"
+    "Height_cm"
+    "Weight_kg"
+    "Medikation"
+    "AD_MW"
+    "Hyp_MW"
+    "D2_F__SW"
+    "D2_BZO_SW"
+    "D2_KL_SW"
+    "Stroop_FWL_SW"
+    "Stroop_FSB_SW"
+    "Stroop_INT_SW"
+    ];
+idx = ~ismember(variables_orig, variables_clean);
+CognitionTable_all(:, idx) = [];
+
+%% Combined table long format (pre and post values in rows)
+
+SourceMotorTable = MotorTable_long;
+SourceCognitionTable = CognitionTable_all;
+TargetTable = struct([]);
+iRow = 1;
+subjects = unique(SourceMotorTable.Subject);
+for iSubject = 1:length(subjects)
+    subject = subjects{iSubject};
+    subjectMotorTable = SourceMotorTable(SourceMotorTable.Subject == string(subject), :);
+    subjectCognitionTable = SourceCognitionTable(SourceCognitionTable.Subject == string(subject), :);
+    for iStage = 1:length(stages)
+        stage = stages(iStage);
+        stageMotorTable = subjectMotorTable(subjectMotorTable.Stage == stage, :);
+        stageCognitionTable = subjectCognitionTable(subjectCognitionTable.Stage == stage, :);
+        if isempty(stageMotorTable) || isempty(stageCognitionTable)
             continue
         end
-        initRow = table2struct(combTable(1, :));
-        variables = setdiff(fieldnames(initRow), depVars);
-        task = initRow.Task;
+        if size(stageMotorTable, 1) > 1
+            warning('Motor table contains for subject %s and stage %d more than 1 entry -> skip additional entries\n', subject, stage);
+        end
+        if size(stageCognitionTable, 1) > 1
+            warning('Cognition table contains for subject %s and stage %d more than 1 entry -> skip additional entries\n', subject, stage);
+        end
+        initRow = table2struct(stageMotorTable(1, :));
+        variables = stageMotorTable.Properties.VariableNames;
         for iVar = 1:length(variables)
             variable = variables{iVar};
-            LongTable(iRow).(variable) = initRow.(variable);
+            TargetTable(iRow).(variable) = initRow.(variable);
         end
-        for iVar = 1:length(depVars)
-            depVar = depVars{iVar};
-            values = combTable.(depVar);
-            LongTable(iRow).(sprintf('%s_%s', task, depVar)) = mean(values, 'omitnan');
-            value = std(values, 'omitnan');
-            if value == 0
-                value = NaN;
-            end
-            LongTable(iRow).(sprintf('%s_%s_std', task, depVar)) = value;
-            LongTable(iRow).(sprintf('%s_%s_n', task, depVar)) = length(values);
-        end        
-        
+        variables = setdiff(stageCognitionTable.Properties.VariableNames, variables, 'stable');
+        depVars = union(depVars, variables, 'stable');
+        for iVar = 1:length(variables)
+            variable = variables{iVar};
+            TargetTable(iRow).(variable) = stageCognitionTable.(variable);
+        end
         % increment row index
         iRow = iRow + 1;
     end
 end
 % convert structure array to table
-LongTable = struct2table(LongTable);
-% clean up
-LongTable = removevars(LongTable, {'Trial', 'Side', 'FileName'});
+TargetTable = struct2table(TargetTable);
+SkatingTable_long = TargetTable;
 
-%% Wide motor table
+%% Combined table wide format (pre and post values in columns)
 
-prepostVar = 'Stage';
-prepostValues = [1 2];
-conditions = setdiff(conditions, prepostVar);
-newDepVars = depVars;
-for iVar = 1:length(depVars)
-    depVar = depVars{iVar};
-    newDepVars = [newDepVars, {[depVar, '_std'], [depVar, '_n']}]; %#ok<AGROW>
-end
-depVars = newDepVars;
-
-SourceTable = LongTable;
-WideTable = table;
+SourceTable = SkatingTable_long;
+TargetTable = struct([]);
+iRow = 1;
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
     subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
-    levels = cell(1, length(conditions));
-    for iCond = 1:length(conditions)
-        condition = conditions{iCond};
-        levels{iCond} = unique(subjectTable.(condition));
+    if isempty(subjectTable)
+        continue
     end
-    condCombs = table2cell(combinations(levels{:}));
-    nCondCombs = size(condCombs, 1);
-    for iComb = 1:nCondCombs
-        combTable = subjectTable;
-        for iCond = 1:length(condCombs(iComb, :))
-            cond = conditions{iCond};
-            value = condCombs{iComb, iCond};
-            rows = (combTable.(cond) == value);
-            combTable = combTable(rows, :);
-        end
-        if isempty(combTable)
-            continue
-        end
-        myTable = combTable(combTable.(prepostVar) == prepostValues(1), :);
-        if isempty(myTable)
-            fprintf('\t- No pre measurement for condition (%s, %s) -> skipping\n', subject, strjoin(string(condCombs(iComb, :)), ', '));
-            continue
-        end
-        myTable = combTable(combTable.(prepostVar) == prepostValues(2), :);
-        if isempty(myTable)
-            fprintf('\t- No post measurement for condition (%s, %s) -> skipping\n', subject, strjoin(string(condCombs(iComb, :)), ', '));
-            continue
-        end
-        tableRow = myTable;
-        for iVar = 1:length(depVars)
-            depVar = depVars{iVar};
-            value = combTable.(depVar)(combTable.(prepostVar) == prepostValues(1));
-            if isempty(value)
-                value = NaN;
-            end
-            tableRow.([depVar, '_pre']) = value;
-            value = combTable.(depVar)(combTable.(prepostVar) == prepostValues(2));
-            if isempty(value)
-                value = NaN;
-            end
-            tableRow.([depVar, '_post']) = value;
-            tableRow = removevars(tableRow, depVar);
-        end
-        WideTable = [WideTable; tableRow]; %#ok<AGROW>
+    initRow = table2struct(subjectTable(1, :));
+    variables = setdiff(fieldnames(initRow), [depVars, {'Stage'}], 'stable');
+    for iVar = 1:length(variables)
+        variable = variables{iVar};
+        TargetTable(iRow).(variable) = initRow.(variable);
     end
+    for iVar = 1:length(depVars)
+        depVar = depVars{iVar};
+        value = subjectTable.(depVar)(subjectTable.Stage == stages(1));
+        if isempty(value)
+            value = NaN;
+        end
+        TargetTable(iRow).([depVar, '_pre']) = value;
+        value = subjectTable.(depVar)(subjectTable.Stage == stages(2));
+        if isempty(value)
+            value = NaN;
+        end
+        TargetTable(iRow).([depVar, '_post']) = value;
+    end
+    % increment row index
+    iRow = iRow + 1;
 end
-WideTable = removevars(WideTable, {prepostVar});
-
-%% Reduce motor tables
-
-rmVars = {'subjectCode', 'date', 'Beidbein_start', 'Beidbein_stop', 'Einbein_start', 'Einbein_stop', 'doneData', 'doneMetrics', 'donePlots'};
-% clean table
-myRmVars = intersect(CleanTable.Properties.VariableNames, rmVars);
-CleanTable = removevars(CleanTable, myRmVars);
-% long mean table
-myRmVars = intersect(LongTable.Properties.VariableNames, rmVars);
-LongTable = removevars(LongTable, myRmVars);
-% wide mean table
-myRmVars = intersect(WideTable.Properties.VariableNames, rmVars);
-WideTable = removevars(WideTable, myRmVars);
-
-
-%% Cognitive tables
-
-% % delete irrelevant columns
-% variables_orig = CognitionData.Properties.VariableNames;
-% variables_clean = [
-%     "Probandencode"
-%     "ADHS"
-%     "Stage"
-%     "Intervention"
-%     "Sex"
-%     "Age_yrs"
-%     "Height_cm"
-%     "Weight_kg"
-%     "Medikation"
-%     "AD_MW"
-%     "Hyp_MW"
-%     "D2_F__SW"
-%     "D2_BZO_SW"
-%     "D2_KL_SW"
-%     "Stroop_FWL_SW"
-%     "Stroop_FSB_SW"
-%     "Stroop_INT_SW"
-%     ];
-% idx = ~ismember(variables_orig, variables_clean);
-% CognitionData(:, idx) = [];
+% convert structure array to table
+TargetTable = struct2table(TargetTable);
+SkatingTable_wide = TargetTable;
 
 %% Append tables to Measurements structure
 
-Measurements.CleanTable = CleanTable;
-Measurements.LongTable = LongTable;
-Measurements.WideTable = WideTable;
+Measurements.MotorTable_all = MotorTable_all;
+Measurements.MotorTable_long = MotorTable_long;
+Measurements.MotorTable_wide = MotorTable_wide;
+Measurements.CognitionTable_all = CognitionTable_all;
+Measurements.SkatingTable_long = SkatingTable_long;
+Measurements.SkatingTable_wide = SkatingTable_wide;
 
 %% save Measurements structure
 
@@ -201,22 +257,23 @@ assignin('base', 'Measurements', Measurements);
 % save current state
 saveState;
 
-%% save tables to disk
+%% save table to disk
 
-% write original table
-fprintf('Saving observations to table...\n');
-saveTable(MotorMetrics, 'Observations_orig', {'xlsx'}, outDir);
+% write Motor table
+fprintf('Saving Motor table...\n');
+saveTable(MotorTable_all, 'MotorTable_all', {'xlsx'}, outDir);
 
-% write clean table
-fprintf('Saving clean observations to table...\n');
-saveTable(CleanTable, 'Observations_clean', {'csv'}, outDir);
+% write Cognition table
+fprintf('Saving Cognition table...\n');
+saveTable(CognitionTable_all, 'CognitionTable_all', {'xlsx'}, outDir);
 
-% write mean table
-fprintf('Saving averaged observations in long format to table...\n');
-saveTable(LongTable, 'Observations_long', {'csv'}, outDir);
 
-% write wide table
-fprintf('Saving averaged observations in wide format to table...\n');
-saveTable(WideTable, 'Observations_wide', {'csv'}, outDir);
+% write Skating table in long format
+fprintf('Saving Skating table in long format...\n');
+saveTable(SkatingTable_long, 'SkatingTable_long', {'csv'}, outDir);
+
+% write Skating table in wide format
+fprintf('Saving Skating table in wide format...\n');
+saveTable(SkatingTable_wide, 'SkatingTable_wide', {'csv'}, outDir);
 
 end

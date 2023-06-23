@@ -1,5 +1,7 @@
 function makeMotorMetrics()
 
+fprintf('\nMaking Motor Metrics...\n');
+
 % load current state
 Measurements = loadState();
 
@@ -33,7 +35,6 @@ for iFile = 1:nFiles
     subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
     [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
     if isempty(subjectIdx)
-        warning('Subject code %s not found -> skipping', subjectCode);
         continue
     end
     MotorMetrics(item).Subject = string(subject);
@@ -46,7 +47,7 @@ for iFile = 1:nFiles
     MotorMetrics(item).Stage = stage;
 
     % subject properties
-    subjectProps = {'ADHS', 'Medication'};
+    subjectProps = {'ADHS', 'Medication', 'Sex'};
     for iProp = 1:length(subjectProps)
         propName = subjectProps{iProp};
         propValue = Subjects.(propName)(subjectIdx);
@@ -109,12 +110,6 @@ for iFile = 1:nFiles
 
     % store file name in MotorMetrics(item)
     MotorMetrics(item).FileName = string(fileName);
-
-    % set flags
-    MotorMetrics(item).DonePlots = 0;    
-
-    % % report progress
-    % fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iFile, nFiles, iFile/nFiles*100);
 
     % get variables
     subjectWeight = MotorMetrics(item).Weight;
@@ -197,6 +192,9 @@ for iFile = 1:nFiles
     % increment number of processed files
     item = item+1;    
 end
+
+% remove subject code, as it is already encoded in subject ID and stage
+MotorMetrics = rmfield(MotorMetrics, 'SubjectCode');
 
 % append MotorMetrics table to Measurements structure
 Measurements.MotorMetrics = struct2table(MotorMetrics);

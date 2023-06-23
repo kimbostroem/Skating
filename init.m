@@ -1,3 +1,7 @@
+%% Initilization
+
+fprintf('\nInitializing...\n');
+
 % clear workspace
 clear
 close all
