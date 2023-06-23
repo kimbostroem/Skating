@@ -111,16 +111,24 @@ for iSubject = 1:length(subjects)
     end
     for iVar = 1:length(depVars)
         depVar = depVars{iVar};
+        % pre
         value = subjectTable.(depVar)(subjectTable.Stage == stages(1));
         if isempty(value)
             value = NaN;
+        elseif iscell(value)
+            value = cell2mat(value);
         end
         TargetTable(iRow).([depVar, '_pre']) = value;
+        % post
         value = subjectTable.(depVar)(subjectTable.Stage == stages(2));
         if isempty(value)
             value = NaN;
+        elseif iscell(value)
+            value = cell2mat(value);
         end
         TargetTable(iRow).([depVar, '_post']) = value;
+        % post - pre
+        TargetTable(iRow).([depVar, '_diff']) = (TargetTable(iRow).([depVar, '_post']) - TargetTable(iRow).([depVar, '_pre']));
     end
     % increment row index
     iRow = iRow + 1;
@@ -221,16 +229,24 @@ for iSubject = 1:length(subjects)
     end
     for iVar = 1:length(depVars)
         depVar = depVars{iVar};
+        % pre
         value = subjectTable.(depVar)(subjectTable.Stage == stages(1));
         if isempty(value)
             value = NaN;
+        elseif iscell(value)
+            value = cell2mat(value);
         end
         TargetTable(iRow).([depVar, '_pre']) = value;
+        % post
         value = subjectTable.(depVar)(subjectTable.Stage == stages(2));
         if isempty(value)
             value = NaN;
+        elseif iscell(value)
+            value = cell2mat(value);
         end
         TargetTable(iRow).([depVar, '_post']) = value;
+        % post - pre
+        TargetTable(iRow).([depVar, '_diff']) = (TargetTable(iRow).([depVar, '_post']) - TargetTable(iRow).([depVar, '_pre']));
     end
     % increment row index
     iRow = iRow + 1;
