@@ -18,16 +18,18 @@ ticAll = tic;
 item = 1; 
 MotorMetrics = struct([]);
 for iFile = 1:nFiles    
-    fileName = Measurements.MotorData(iFile).fileName;
+    fname = Measurements.MotorData(iFile).fileName;
 
     % skip invalid files
-    if isempty(fileName) || contains(fileName, 'ungueltig', 'IgnoreCase', true)
-        fprintf('\t-> Skipping invalid file %s\n', fileName);
+    if isempty(fname) || contains(fname, 'ungueltig', 'IgnoreCase', true)
+        fprintf('\t-> Skipping invalid file %s\n', fname);
         continue
-    end
+    end    
+
+    tic
 
     % split file name at underscores
-    parts = strsplit(fileName, '_');
+    parts = strsplit(fname, '_');
 
     % subject identity and code
     subject = parts{1};
@@ -109,7 +111,7 @@ for iFile = 1:nFiles
     MotorMetrics(item).Trial = str2double(trial);
 
     % store file name in MotorMetrics(item)
-    MotorMetrics(item).FileName = string(fileName);
+    MotorMetrics(item).FileName = string(fname);
 
     % get variables
     subjectWeight = MotorMetrics(item).Weight;
@@ -130,23 +132,45 @@ for iFile = 1:nFiles
 
     switch task
 
-        case {'Balance', 'Einbein'}
+        case 'Balance'
 
-            if strcmp(task, 'Balance')
                 % Calc distance to beam for task "Balance". The beam is
                 % parallel to the x-axis, therefore fit a polynom of 0th
                 % order (constant function)
-                polyOrder = 0;
-                coefficients = polyfit(COP(1, idxContact), COP(2, idxContact), polyOrder);
-                targetFcn = @(x, y) polyval(coefficients, x);
-                deviationFcn = @(x, y) abs(y - targetFcn(x, y));                
-            elseif strcmp(task, 'Einbein')
+                tic
+                COPx = COP(1, idxContact);
+                COPy = COP(2, idxContact);
+                nSamples = size(COPx, 2);
+                polyOrder = 1;
+                coefficients = polyfit(COPx, COPy, polyOrder);
+                beamYFcn = @(x) polyval(coefficients, x);
+
+                % method 1 using fminsearch (faster)
+                options = optimset('Display', 'off');
+                ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);                
+                deviation = nan(1, nSamples);
+                exitflag = 1;
+                for iSample = 1:nSamples
+                    minFcn = @(x_) ppdistanceFcn(COPx(iSample), COPy(iSample), x_);
+                    [~, deviation(iSample), exitflag] = fminsearch(minFcn, COPx(iSample), options);
+                     if exitflag <= 0
+                         break
+                     end
+                end
+                if exitflag <= 0
+                    % method 2 using min (slower)
+                    BeamX = linspace(min(COPx), max(COPx), nSamples);
+                    BeamY = beamYFcn(BeamX);
+                    distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
+                    deviation = arrayfun(distanceFcn, COPx, COPy);
+                end
+                fluctuation = mean(deviation, 'omitnan');
+        case 'Einbein'
                 meanCOP = mean(COP, 2, 'omitnan');
                 deviationFcn = @(x, y) vecnorm([x; y] - meanCOP);
-            end
-            deviation = deviationFcn(COP(1, :), COP(2, :));
-            fluctuation = mean(deviation, 'omitnan');
-
+                deviation = deviationFcn(COP(1, :), COP(2, :));
+                fluctuation = mean(deviation, 'omitnan');
+            
         case 'Sprung'
             % distance to jump stop position
             deviation = abs(Measurements.MotorData(iFile).COP(1, :) - stopPos(1));
@@ -188,6 +212,9 @@ for iFile = 1:nFiles
         MotorMetrics(item).(meanJerkName) = NaN;
         MotorMetrics(item).(meanJerkXYName) = NaN;
     end
+
+    % report progress
+    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', fname, iFile, nFiles, iFile/nFiles*100, toc);
 
     % increment number of processed files
     item = item+1;    
