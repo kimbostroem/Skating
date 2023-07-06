@@ -43,6 +43,7 @@ for iFile = 1:nFiles
     if any(strcmp(fname, loadedFiles))
         continue
     end
+    tic
 
     % split file name into parts separated by underscore
     parts = strsplit(fname, '_');
@@ -68,10 +69,7 @@ for iFile = 1:nFiles
     else
         side = parts{4};
     end
-
-    % report progress
-    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fname, iFile, nFiles, iFile/nFiles*100);
-
+   
     %% Import Force data
 
     tmp = load(fpath);
@@ -191,6 +189,9 @@ for iFile = 1:nFiles
     Measurements.MotorData(fileNr).idxContact = ~idxGaps;
     Measurements.MotorData(fileNr).startPos = startPos;
     Measurements.MotorData(fileNr).stopPos = stopPos;    
+
+    % report progress
+    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', fname, iFile, nFiles, iFile/nFiles*100, toc);
 
     % export Measurements structure to base workspace
     assignin('base', 'Measurements', Measurements);

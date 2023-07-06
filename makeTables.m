@@ -214,13 +214,15 @@ SkatingTable_long = TargetTable;
 
 SourceTable = SkatingTable_long;
 TargetTable = struct([]);
+nSubjects = length(subjects);
 iRow = 1;
-for iSubject = 1:length(subjects)
+for iSubject = 1:nSubjects
     subject = subjects{iSubject};
     subjectTable = SourceTable(SourceTable.Subject == string(subject), :);
     if isempty(subjectTable)
         continue
     end
+    tic
     initRow = table2struct(subjectTable(1, :));
     variables = setdiff(fieldnames(initRow), [depVars, {'Stage'}], 'stable');
     for iVar = 1:length(variables)
@@ -248,6 +250,10 @@ for iSubject = 1:length(subjects)
         % post - pre
         TargetTable(iRow).([depVar, '_diff']) = (TargetTable(iRow).([depVar, '_post']) - TargetTable(iRow).([depVar, '_pre']));
     end
+
+    % report progress
+    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', subject, iSubject, nSubjects, iSubject/nSubjects*100, toc);
+
     % increment row index
     iRow = iRow + 1;
 end

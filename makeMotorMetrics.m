@@ -141,7 +141,7 @@ for iFile = 1:nFiles
                 COPx = COP(1, idxContact);
                 COPy = COP(2, idxContact);
                 nSamples = size(COPx, 2);
-                polyOrder = 1;
+                polyOrder = 0;
                 coefficients = polyfit(COPx, COPy, polyOrder);
                 beamYFcn = @(x) polyval(coefficients, x);
 
@@ -187,13 +187,15 @@ for iFile = 1:nFiles
     % path length
     pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
 
-    fluctuationName = 'Fluctuation';
+    fluctuationName = 'Target Error';
 
     % mean jerk
     meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
     meanJerkName = 'Jerk';
     meanJerkXY = mean(vecnorm(Jerk(1:2, :), 2, 1), 'omitnan');
     meanJerkXYName = 'JerkXY';
+    meanJerkZ = mean(vecnorm(Jerk(3, :), 2, 1), 'omitnan');
+    meanJerkZName = 'JerkZ';
 
     % store metrics in structure
     Measurements.MotorData(iFile).Deviation = deviation;
@@ -202,6 +204,7 @@ for iFile = 1:nFiles
     MotorMetrics(item).(fluctuationName) = fluctuation;
     MotorMetrics(item).(meanJerkName) = meanJerk;
     MotorMetrics(item).(meanJerkXYName) = meanJerkXY;
+    MotorMetrics(item).(meanJerkZName) = meanJerkZ;
 
     % mark invalid datasets
     MotorMetrics(item).isValid = 1;
