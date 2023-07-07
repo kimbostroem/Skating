@@ -13,7 +13,7 @@ outDir = evalin('base', 'outDir');
 
 MotorMetrics = Measurements.MotorMetrics;
 
-depVars = {'PathLength', 'Fluctuation', 'Jerk', 'JerkXY'};
+depVars = {'PathLength', 'TargetError', 'Jerk', 'JerkXY', 'JerkZ'};
 subjects = unique(Measurements.Subjects.Subject);
 
 %% Clean motor table

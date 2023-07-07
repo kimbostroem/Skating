@@ -141,7 +141,7 @@ for iFile = 1:nFiles
                 COPx = COP(1, idxContact);
                 COPy = COP(2, idxContact);
                 nSamples = size(COPx, 2);
-                polyOrder = 0;
+                polyOrder = 1;
                 coefficients = polyfit(COPx, COPy, polyOrder);
                 beamYFcn = @(x) polyval(coefficients, x);
 
@@ -187,7 +187,7 @@ for iFile = 1:nFiles
     % path length
     pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
 
-    fluctuationName = 'Target Error';
+    fluctuationName = 'TargetError';
 
     % mean jerk
     meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
