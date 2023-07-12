@@ -1,6 +1,6 @@
 %% Initilization
 
-fprintf('\nInitializing...\n');
+fprintf('Initializing...\n');
 
 % clear workspace
 clear
