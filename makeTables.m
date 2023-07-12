@@ -140,13 +140,14 @@ MotorTable_wide = TargetTable;
 
 %% Cognition tables
 
-CognitionTable_all = Measurements.CognitionData;
+CognitionTable_orig = Measurements.CognitionData;
 
 % delete irrelevant columns
-variables_orig = CognitionTable_all.Properties.VariableNames;
+variables_orig = CognitionTable_orig.Properties.VariableNames;
 variables_clean = [
     "Subject"
     "ADHS"
+    "ADS"
     "Stage"
     "Intervention"
     "Sex"
@@ -154,6 +155,9 @@ variables_clean = [
     "Height_cm"
     "Weight_kg"
     "Medikation"
+    "Skating_reg"
+    "Skating_add"
+    "Skating_tot"
     "AD_MW"
     "Hyp_MW"
     "D2_F__SW"
@@ -163,13 +167,14 @@ variables_clean = [
     "Stroop_FSB_SW"
     "Stroop_INT_SW"
     ];
-idx = ~ismember(variables_orig, variables_clean);
-CognitionTable_all(:, idx) = [];
+variables_final = intersect(variables_clean, variables_orig, 'stable');
+CognitionTable_all = CognitionTable_orig(:, variables_final);
 
 %% Combined table long format (pre and post values in rows)
 
 SourceMotorTable = MotorTable_long;
 SourceCognitionTable = CognitionTable_all;
+
 TargetTable = struct([]);
 iRow = 1;
 subjects = unique(SourceMotorTable.Subject);
