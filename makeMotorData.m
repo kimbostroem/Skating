@@ -2,7 +2,6 @@ function makeMotorData()
 
 fprintf('\nMaking Motor Data...\n');
 
-
 motorDir = evalin('base', 'motorDir');
 
 % load current state
@@ -153,7 +152,7 @@ for iFile = 1:nFiles
 
     startPos = nan(3, 1);
     stopPos = nan(3, 1);
-    if isfield(MotorData, 'Trajectories') && isfield(MotorData.Trajectories, 'Labeled')
+    if isfield(MotorData, 'Trajectories') && isfield(MotorData.Trajectories, 'Labeled') && isfield(MotorData.Trajectories.Labeled, 'Labels')
         labels = MotorData.Trajectories.Labeled.Labels;
         % get start and stop marker labels
         switch side
