@@ -23,6 +23,59 @@ idx = cell2mat(cellfun(@(x) ismember(x, excludedSubjects), CognitionData.Subject
 CognitionData(idx,:) = [];
 fprintf('Excluded %d subjects from Cognition table that did not appear in Subjects table\n', length(excludedSubjects));
 
+% calc guided skating units
+if ismember('ZusaetzlichSkaten', CognitionData.Properties.VariableNames) && ismember('Absage', CognitionData.Properties.VariableNames)
+    addSkate = CognitionData.ZusaetzlichSkaten;
+    missSkate = CognitionData.Absage;
+    nRows = length(addSkate);
+    Skating_reg = nan(nRows, 1);
+    Skating_add = nan(nRows, 1);
+    for iRow = 1:nRows
+
+        % regular skating units
+        switch missSkate(iRow)
+            case 0
+                Skating_reg(iRow) = 12;
+            case 1
+                Skating_reg(iRow) = 10;
+            case 2
+                Skating_reg(iRow) = 7;
+            case 3
+                Skating_reg(iRow) = 4;
+            case 4
+                Skating_reg(iRow) = 1;
+            otherwise
+                Skating_reg(iRow) = 12;
+        end
+
+        % additional skating units
+        switch addSkate(iRow)
+            case 0
+                Skating_add(iRow) = 0;
+            case 1
+                Skating_add(iRow) = 24;
+            case 2
+                Skating_add(iRow) = 12;
+            case 3
+                Skating_add(iRow) = 6;
+            case 4
+                Skating_add(iRow) = 3;
+            case 5
+                Skating_add(iRow) = 1;
+            otherwise
+                Skating_add(iRow) = 0;
+        end        
+    end
+
+    % total skating units
+    Skating_tot = sum([Skating_reg, Skating_add], 2, 'omitnan');
+
+    % append variables to table
+    CognitionData.Skating_reg = Skating_reg;
+    CognitionData.Skating_add = Skating_add;
+    CognitionData.Skating_tot = Skating_tot;
+end
+
 % append CognitionData to Measurements structure
 Measurements.CognitionData = CognitionData;
 
