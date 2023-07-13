@@ -48,14 +48,6 @@ for iFile = 1:nFiles
     stage = find(strcmp(stages, stageStr), 1, 'first');
     MotorMetrics(item).Stage = stage;
 
-    % subject properties
-    subjectProps = {'ADHS', 'Medication', 'Sex'};
-    for iProp = 1:length(subjectProps)
-        propName = subjectProps{iProp};
-        propValue = SubjectsTable.(propName)(subjectIdx);
-        MotorMetrics(item).(subjectProps{iProp}) = propValue;
-    end
-
     % subject properties with trailing 'I', 'II', or 'III'
     subjectProps = {'Height', 'Weight', 'Age', 'Date'};
     for iProp = 1:length(subjectProps)
