@@ -268,10 +268,8 @@ SkatingTable_wide = TargetTable;
 
 %% Append tables to Measurements structure
 
-Measurements.MotorTable_all = MotorTable_all;
-Measurements.MotorTable_long = MotorTable_long;
-Measurements.MotorTable_wide = MotorTable_wide;
-Measurements.CognitionTable_all = CognitionTable_all;
+Measurements.MotorTable = MotorTable_all;
+Measurements.CognitionTable = CognitionTable_all;
 Measurements.SkatingTable_long = SkatingTable_long;
 Measurements.SkatingTable_wide = SkatingTable_wide;
 
