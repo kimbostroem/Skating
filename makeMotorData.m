@@ -8,7 +8,7 @@ motorDir = evalin('base', 'motorDir');
 Measurements = loadState;
 
 % load table containing subjects info
-Subjects = Measurements.Subjects;
+SubjectsTable = Measurements.Subjects;
 
 % list content of input folder into cell array
 dirInfo = dir(fullfile(motorDir, '*.mat'));
@@ -50,17 +50,17 @@ for iFile = 1:nFiles
     % subject identity and code
     subject = parts{1};
     subjectCode = [subject, '_', parts{2}];
-    subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
+    subjectCodes = [SubjectsTable.Code_I, SubjectsTable.Code_II, SubjectsTable.Code_III];
     [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
     if isempty(subjectIdx)
         continue
     end
 
     % jump position markers
-    Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
-    Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
-    Einbein_start = string(Subjects.Einbein_start(subjectIdx));
-    Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
+    Beidbein_start = string(SubjectsTable.Beidbein_start(subjectIdx));
+    Beidbein_stop = string(SubjectsTable.Beidbein_stop(subjectIdx));
+    Einbein_start = string(SubjectsTable.Einbein_start(subjectIdx));
+    Einbein_stop = string(SubjectsTable.Einbein_stop(subjectIdx));
 
     % side or Kraft
     if strcmp(parts{4}, 'Kraft')

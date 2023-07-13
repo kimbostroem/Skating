@@ -9,7 +9,7 @@ Measurements = loadState();
 outDir = evalin('base', 'outDir');
 
 % load table containing subjects info
-Subjects = Measurements.Subjects;
+SubjectsTable = Measurements.Subjects;
 
 nFiles = length(Measurements.MotorData);
 
@@ -34,7 +34,7 @@ for iFile = 1:nFiles
     % subject identity and code
     subject = parts{1};
     subjectCode = [parts{1}, '_', parts{2}];
-    subjectCodes = [Subjects.Code_I, Subjects.Code_II, Subjects.Code_III];
+    subjectCodes = [SubjectsTable.Code_I, SubjectsTable.Code_II, SubjectsTable.Code_III];
     [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
     if isempty(subjectIdx)
         continue
@@ -52,7 +52,7 @@ for iFile = 1:nFiles
     subjectProps = {'ADHS', 'Medication', 'Sex'};
     for iProp = 1:length(subjectProps)
         propName = subjectProps{iProp};
-        propValue = Subjects.(propName)(subjectIdx);
+        propValue = SubjectsTable.(propName)(subjectIdx);
         MotorMetrics(item).(subjectProps{iProp}) = propValue;
     end
 
@@ -62,7 +62,7 @@ for iFile = 1:nFiles
         myStage = stage;
         while myStage > 0
             propName = sprintf('%s_%s', subjectProps{iProp}, stages{myStage});
-            propValue = Subjects.(propName)(subjectIdx);
+            propValue = SubjectsTable.(propName)(subjectIdx);
             if strcmp(subjectProps{iProp}, 'Date') || ~isnan(propValue)
                 MotorMetrics(item).(subjectProps{iProp}) = propValue;
                 break
@@ -102,10 +102,10 @@ for iFile = 1:nFiles
     MotorMetrics(item).Side = string(side);
 
     % jump position markers
-    MotorMetrics(item).Beidbein_start = string(Subjects.Beidbein_start(subjectIdx));
-    MotorMetrics(item).Beidbein_stop = string(Subjects.Beidbein_stop(subjectIdx));
-    MotorMetrics(item).Einbein_start = string(Subjects.Einbein_start(subjectIdx));
-    MotorMetrics(item).Einbein_stop = string(Subjects.Einbein_stop(subjectIdx));
+    MotorMetrics(item).Beidbein_start = string(SubjectsTable.Beidbein_start(subjectIdx));
+    MotorMetrics(item).Beidbein_stop = string(SubjectsTable.Beidbein_stop(subjectIdx));
+    MotorMetrics(item).Einbein_start = string(SubjectsTable.Einbein_start(subjectIdx));
+    MotorMetrics(item).Einbein_stop = string(SubjectsTable.Einbein_stop(subjectIdx));
 
     % trial number
     MotorMetrics(item).Trial = str2double(trial);

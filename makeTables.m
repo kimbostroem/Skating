@@ -286,6 +286,10 @@ saveState;
 
 %% save table to disk
 
+% write Subjects table
+fprintf('Saving Subjects table...\n');
+saveTable(Measurements.Subjects, 'SubjectsTable', {'xlsx'}, outDir);
+
 % write Motor table
 fprintf('Saving Motor table...\n');
 saveTable(MotorTable_all, 'MotorTable_all', {'xlsx'}, outDir);
@@ -293,7 +297,6 @@ saveTable(MotorTable_all, 'MotorTable_all', {'xlsx'}, outDir);
 % write Cognition table
 fprintf('Saving Cognition table...\n');
 saveTable(CognitionTable_all, 'CognitionTable_all', {'xlsx'}, outDir);
-
 
 % write Skating table in long format
 fprintf('Saving Skating table in long format...\n');
