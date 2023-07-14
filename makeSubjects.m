@@ -63,7 +63,7 @@ if ismember('ZusaetzlichSkaten', SubjectsTable.Properties.VariableNames) && isme
     Skating_tot = sum([Skating_reg, Skating_add], 2, 'omitnan');
 
     % binned version of total skating units
-    Skating_edg = [0 10 16 25 inf];
+    Skating_edg = [0 16 inf];
     Skating_tot_bin = discretize(Skating_tot, Skating_edg);
 
     % append variables to table
