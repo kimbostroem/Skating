@@ -172,8 +172,8 @@ for iFile = 1:nFiles
     end
 
     % jerk
-    dJerk = diff(Force, 1, 2);
-    Jerk = [dJerk, dJerk(:, end)] / (dt * subjectWeight);
+    dForce = diff(Force, 1, 2);
+    Jerk = [dForce, dForce(:, end)] / (dt * subjectWeight);
     Jerk(:, ~idxContact) = 0; % remove jerk around gaps
 
     % path length
