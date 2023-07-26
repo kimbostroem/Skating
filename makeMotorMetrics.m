@@ -69,7 +69,7 @@ for iFile = 1:nFiles
         case 'I'
             intervention = 0;
         case 'II'
-            if max(subjectStages) == 3 % subject has been tested at three stages
+            if max(subjectStages) == 3 % subject has been tested at three stages, with intervention in 3rd stage
                 intervention = 0;
             else
                 intervention = 1;
