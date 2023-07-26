@@ -30,7 +30,7 @@ Measurements.CognitionData = CognitionTable;
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);
 
-% save current state
-saveState;
+fprintf('If necessary, save current state using ''saveState''\n');
+
 
 end

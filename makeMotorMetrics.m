@@ -229,9 +229,7 @@ writetable(Measurements.MotorMetrics, outpath, 'WriteMode', 'replacefile');
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);
 
-% save current state
-saveState;
-
 fprintf('Finished creating metrics from %d datasets in %.3f s\n', item, toc(ticAll));
+fprintf('If necessary, save current state using ''saveState''\n');
 
 end

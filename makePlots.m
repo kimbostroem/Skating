@@ -1,14 +1,14 @@
 function makePlots
 
 % load current state
-loadState;
+Measurements = loadState();
 
-outDir = Measurements.outDir; %#ok<NODEF>
-nMeas = length(Measurements.Observations);
+outDir = evalin('base', 'outDir');
 
 fprintf('Make plots...\n');
 ticAll = tic;
 nProc = 0; % init number of processed files
+nMeas = length(Measurements.Observations);
 for iMeas = 1:nMeas
     ticItem = tic;
 
@@ -245,8 +245,7 @@ for iMeas = 1:nMeas
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
 
-saveState;
-
 fprintf('Finished plotting from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
+fprintf('If necessary, save current state using ''saveState''\n');
 
 end

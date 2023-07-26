@@ -5,7 +5,7 @@ fprintf('\nMaking Motor Data...\n');
 motorDir = evalin('base', 'motorDir');
 
 % load current state
-Measurements = loadState;
+Measurements = loadState();
 
 % load table containing subjects info
 SubjectsTable = Measurements.Subjects;
@@ -17,7 +17,6 @@ fnames = {dirInfo.name}';
 idxExclude = startsWith(fnames', {'.', '~'}) | [dirInfo.isdir];
 fnames(idxExclude) = [];
 fdirs(idxExclude) = [];
-fpaths = strcat(fdirs, filesep, fnames);
 
 gapMargin = 0.1; % margin around gaps in seconds, because there the COP is distorted
 LoadThresh = 20; % threshold below which forces are set to zero [N]
@@ -33,6 +32,11 @@ if isfield(Measurements, 'MotorData') && isfield(Measurements.MotorData, 'fileNa
 else
     loadedFiles = {};
 end
+
+[~, fnames, fexts] = fileparts(fnames);
+[~, iA] = setdiff(fnames, loadedFiles);
+fpaths = strcat(fdirs(iA), filesep, fnames(iA), fexts(iA));
+
 nFiles = length(fpaths);
 fileNr = length(loadedFiles) + 1; % init file index to end of already loaded files
 for iFile = 1:nFiles
@@ -42,6 +46,8 @@ for iFile = 1:nFiles
     if any(strcmp(fname, loadedFiles))
         continue
     end
+
+    
     tic
 
     % split file name into parts separated by underscore
@@ -53,6 +59,7 @@ for iFile = 1:nFiles
     subjectCodes = [SubjectsTable.Code_I, SubjectsTable.Code_II, SubjectsTable.Code_III];
     [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
     if isempty(subjectIdx)
+        % fprintf('\t%s:\tNo subject with code ''%s'' -> skipping\n', fname, subjectCode);
         continue
     end
 
@@ -79,7 +86,7 @@ for iFile = 1:nFiles
     PowerLineHum = 50;
     nSamples = length(Forces);
     if nSamples < 2^nextpow2(PowerLineHum)/2
-        fprintf('\t\tNot enough data (%d samples) -> skipping\n', nSamples);
+        fprintf('\t%s:\tNot enough data (%d samples) -> skipping\n', fname, nSamples);
         continue
     end
     Forces = -Forces; % ground reaction forces are inverse of plate forces
@@ -111,7 +118,7 @@ for iFile = 1:nFiles
     COP = COP(:, iStart:iStop+iStart-1);
     nSamples = size(Force, 2);
     if nSamples == 0
-        fprintf('\t\tToo few samples with nonzero force -> skipping\n');
+        fprintf('\t%s:\tToo few samples with nonzero force -> skipping\n', fname);
         continue
     end
     Time = (0:nSamples-1)/sampleRate;
@@ -199,9 +206,7 @@ for iFile = 1:nFiles
     fileNr = fileNr+1;
 end
 
-% save current state
-saveState;
-
 fprintf('Finished extracting data from %d files in %.3f s\n', fileNr - (length(loadedFiles) + 1), toc(ticAll));
+fprintf('If necessary, save current state using ''saveState''\n');
 
 end

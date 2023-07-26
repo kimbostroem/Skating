@@ -80,7 +80,7 @@ SubjectsTable(idx,:) = [];
 % append Subjects table to Measurements structure
 Measurements.Subjects = SubjectsTable;
 
-% save current state
-saveState;
+fprintf('Finished making %d Subjects\n', size(SubjectsTable, 1));
+fprintf('If necessary, save current state using ''saveState''\n');
 
 end

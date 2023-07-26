@@ -328,9 +328,6 @@ SkatingTable_PB_wide = SkatingTable_long(startsWith(SkatingTable_wide.Subject, '
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);
 
-% save current state
-saveState;
-
 %% save table to disk
 
 % write Subjects table
@@ -360,5 +357,8 @@ saveTable(SkatingTable_PB_long, 'SkatingTable_PB_long', {'csv'}, outDir);
 % write Skating PB table in wide format
 fprintf('Saving Skating PB table in wide format...\n');
 saveTable(SkatingTable_PB_wide, 'SkatingTable_PB_wide', {'csv'}, outDir);
+
+fprintf('If necessary, save current state using ''saveState''\n');
+
 
 end
