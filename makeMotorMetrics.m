@@ -130,11 +130,11 @@ for iFile = 1:nFiles
                 % parallel to the x-axis, therefore fit a polynom of 0th
                 % order (constant function)
                 tic
-                COPx = COP(1, idxContact);
-                COPy = COP(2, idxContact);
+                COPx = COP(1, :);
+                COPy = COP(2, :);
                 nSamples = size(COPx, 2);
                 polyOrder = 1;
-                coefficients = polyfit(COPx, COPy, polyOrder);
+                coefficients = polyfit(COPx(idxContact), COPy(idxContact), polyOrder);
                 beamYFcn = @(x) polyval(coefficients, x);
 
                 % method 1 using fminsearch (faster)
@@ -143,6 +143,9 @@ for iFile = 1:nFiles
                 deviation = nan(1, nSamples);
                 exitflag = 1;
                 for iSample = 1:nSamples
+                    if ~idxContact(iSample)
+                        continue
+                    end
                     minFcn = @(x_) ppdistanceFcn(COPx(iSample), COPy(iSample), x_);
                     [~, deviation(iSample), exitflag] = fminsearch(minFcn, COPx(iSample), options);
                      if exitflag <= 0
@@ -156,17 +159,17 @@ for iFile = 1:nFiles
                     distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
                     deviation = arrayfun(distanceFcn, COPx, COPy);
                 end
-                fluctuation = mean(deviation, 'omitnan');
+                targetError = mean(deviation, 'omitnan');
         case 'Einbein'
                 meanCOP = mean(COP, 2, 'omitnan');
                 deviationFcn = @(x, y) vecnorm([x; y] - meanCOP);
                 deviation = deviationFcn(COP(1, :), COP(2, :));
-                fluctuation = mean(deviation, 'omitnan');
+                targetError = mean(deviation, 'omitnan');
             
         case 'Sprung'
             % distance to jump stop position
             deviation = abs(Measurements.MotorData(iFile).COP(1, :) - stopPos(1));
-            [fluctuation, targetIdx] = min(deviation);
+            [targetError, targetIdx] = min(deviation);
             jumpStopPos = Measurements.MotorData(iFile).COP(:, targetIdx);
             Measurements.MotorData(iFile).jumpStopPos = jumpStopPos;
     end
@@ -179,7 +182,7 @@ for iFile = 1:nFiles
     % path length
     pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
 
-    fluctuationName = 'TargetError';
+    targetErrorName = 'TargetError';
 
     % mean jerk
     meanJerk = mean(vecnorm(Jerk, 2, 1), 'omitnan');
@@ -193,7 +196,7 @@ for iFile = 1:nFiles
     Measurements.MotorData(iFile).Deviation = deviation;
     Measurements.MotorData(iFile).Jerk = Jerk;
     MotorMetrics(item).PathLength = pathLength;
-    MotorMetrics(item).(fluctuationName) = fluctuation;
+    MotorMetrics(item).(targetErrorName) = targetError;
     MotorMetrics(item).(meanJerkName) = meanJerk;
     MotorMetrics(item).(meanJerkXYName) = meanJerkXY;
     MotorMetrics(item).(meanJerkZName) = meanJerkZ;
@@ -203,7 +206,7 @@ for iFile = 1:nFiles
     if pathLength == 0 % something is very wrong
         MotorMetrics(item).isValid = 0;
         MotorMetrics(item).PathLength = NaN;
-        MotorMetrics(item).(fluctuationName) = NaN;
+        MotorMetrics(item).(targetErrorName) = NaN;
         MotorMetrics(item).(meanJerkName) = NaN;
         MotorMetrics(item).(meanJerkXYName) = NaN;
     end
