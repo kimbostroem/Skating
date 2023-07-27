@@ -221,10 +221,6 @@ MotorMetrics = rmfield(MotorMetrics, 'SubjectCode');
 % append MotorMetrics table to Measurements structure
 Measurements.MotorMetrics = struct2table(MotorMetrics);
 
-fprintf('\t\t- Saving MotorMetrics to table...\n');
-outpath = fullfile(outDir, 'MotorMetrics.xlsx');
-writetable(Measurements.MotorMetrics, outpath, 'WriteMode', 'replacefile');
-
 % export Measurements structure to base workspace
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);

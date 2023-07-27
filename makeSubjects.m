@@ -73,12 +73,11 @@ if ismember('ZusaetzlichSkaten', SubjectsTable.Properties.VariableNames) && isme
     SubjectsTable.Skating_tot_bin = Skating_tot_bin;
 end
 
-% delete incomplete subjects
-idx = startsWith(SubjectsTable.Subject, "PRCO");
-SubjectsTable(idx,:) = [];
-
 % append Subjects table to Measurements structure
 Measurements.Subjects = SubjectsTable;
+
+% export Measurements structure to base workspace
+assignin('base', 'Measurements', Measurements);
 
 fprintf('Finished making %d Subjects\n', size(SubjectsTable, 1));
 fprintf('If necessary, save current state using ''saveState''\n');

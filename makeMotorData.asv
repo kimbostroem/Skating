@@ -78,7 +78,7 @@ for iFile = 1:nFiles
    
     %% Import Force data
 
-
+    
     tmp = load(fpath);
     fields = fieldnames(tmp);
     MotorData = tmp.(fields{1});
@@ -87,7 +87,7 @@ for iFile = 1:nFiles
         [Forces, sampleRate, COPs, ~, location, Analog] = kraftAusQualisys(MotorData, lengthScale);
     catch ME
         fprintf('\t%s:\tError when extracting forces -> skipping\n', fname);
-        fprintf('\t\t%s\n', ME.message);
+        fprintf('\t\t%s', ME.message);
         continue
     end
     PowerLineHum = 50;

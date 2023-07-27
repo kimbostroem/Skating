@@ -334,7 +334,7 @@ assignin('base', 'Measurements', Measurements);
 fprintf('Saving Subjects table...\n');
 saveTable(Measurements.Subjects, 'SubjectsTable', {'xlsx'}, outDir);
 
-% write Motor table
+% write MotorMetrics table
 fprintf('Saving Motor table...\n');
 saveTable(Measurements.MotorMetrics, 'MotorTable', {'xlsx'}, outDir);
 
