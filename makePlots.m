@@ -8,24 +8,23 @@ outDir = evalin('base', 'outDir');
 fprintf('Make plots...\n');
 ticAll = tic;
 nProc = 0; % init number of processed files
-nMeas = length(Measurements.Observations);
+nMeas = length(Measurements.MotorData);
 for iMeas = 1:nMeas
     ticItem = tic;
 
     % get variables
-    fileName = Measurements.Data(iMeas).fileName;
-    Time = Measurements.Data(iMeas).Time;
-    Force = Measurements.Data(iMeas).Force;
-    COP = Measurements.Data(iMeas).COP;
-    startPos = Measurements.Data(iMeas).startPos;
-    stopPos = Measurements.Data(iMeas).stopPos;
-    task = Measurements.Observations(iMeas).task;
-    doneData = Measurements.Observations(iMeas).doneData;
-    doneMetrics = Measurements.Observations(iMeas).doneMetrics;
-    donePlots = Measurements.Observations(iMeas).donePlots;
+    fileName = Measurements.MotorData(iMeas).fileName;
+    Time = Measurements.MotorData(iMeas).Time;
+    Force = Measurements.MotorData(iMeas).Force;
+    COP = Measurements.MotorData(iMeas).COP;
+    startPos = Measurements.MotorData(iMeas).startPos;
+    stopPos = Measurements.MotorData(iMeas).stopPos;
+    task = Measurements.MotorMetrics.Task(iMeas); 
 
-    if donePlots || ~(doneData && doneMetrics)
+    if isfield(Measurements.MotorData(iMeas), 'donePlots') && ~isempty(Measurements.MotorData(iMeas).donePlots) && Measurements.MotorData(iMeas).donePlots
         continue
+    else
+        Measurements.MotorData(iMeas).donePlots = 0;
     end
 
     % report progress
@@ -78,11 +77,12 @@ for iMeas = 1:nMeas
         case 'Balance'
 
             % get variables
-            targetDist = Measurements.Data(iMeas).targetDist;
-            Jerk = Measurements.Data(iMeas).Jerk;
-            targetError = Measurements.Observations(iMeas).targetError;
-            nSamples = length(targetDist);
-            idxContact = Measurements.Data(iMeas).idxContact;
+            Time = Measurements.MotorData(iMeas).Time;
+            Deviation = Measurements.MotorData(iMeas).Deviation;
+            Jerk = Measurements.MotorData(iMeas).Jerk;
+            TargetError = Measurements.MotorMetrics.TargetError(iMeas);
+            nSamples = length(Deviation);
+            idxContact = Measurements.MotorData(iMeas).idxContact;
 
             % get targetFcn and targetDistFcn
             coefficients = polyfit(COP(1, idxContact), COP(2, idxContact), 1);
@@ -105,11 +105,11 @@ for iMeas = 1:nMeas
             % plot distance to beam
             iPlot = iPlot+1;
             subplot(nRows, nCols, plotIdx(iPlot));
-            plot(Time', targetDist');
+            plot(Time', Deviation');
             hold on
-            yline(targetError, 'r');
+            yline(TargetError, 'r');
             yl = ylim;
-            text(Time(end), max(yl), sprintf('targetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            text(Time(end), max(yl), sprintf('targetError = %.0f mm', TargetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
             xlim([Time(1), Time(end)]);
             title(sprintf('Distance to beam'), 'Interpreter', 'none');
             xlabel('Time [s]');
@@ -127,17 +127,18 @@ for iMeas = 1:nMeas
 
         case 'Einbein'
             % get variables
-            targetDist = Measurements.Data(iMeas).targetDist;
-            Jerk = Measurements.Data(iMeas).Jerk;
-            targetError = Measurements.Observations(iMeas).targetError;
-            meanCOP = mean(COP, 2);
+            Time = Measurements.MotorData(iMeas).Time;
+            Deviation = Measurements.MotorData(iMeas).Deviation;
+            Jerk = Measurements.MotorData(iMeas).Jerk;
+            TargetError = Measurements.MotorMetrics.TargetError(iMeas);
+            MeanCOP = mean(COP, 2);
 
             % plot COP path with center
             iPlot = iPlot+1;
             subplot(nRows, nCols, plotIdx(iPlot));
             hold on
             scatter(COP(1, :), COP(2, :), 2, 'blue');
-            scatter(meanCOP(1), meanCOP(2), 24, 'red', 'x')
+            scatter(MeanCOP(1), MeanCOP(2), 24, 'red', 'x')
             title(sprintf('COP path'), 'Interpreter', 'none');
             xlabel('x [m]');
             ylabel('y [m]');
@@ -147,11 +148,11 @@ for iMeas = 1:nMeas
             % plot distance to center
             iPlot = iPlot+1;
             subplot(nRows, nCols, plotIdx(iPlot));
-            plot(Time', targetDist');
+            plot(Time', Deviation');
             hold on
-            yline(targetError, 'r');
+            yline(TargetError, 'r');
             yl = ylim;
-            text(Time(end), max(yl), sprintf('targetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            text(Time(end), max(yl), sprintf('targetError = %.0f mm', TargetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
             xlim([Time(1), Time(end)]);
             title(sprintf('Distance to center'), 'Interpreter', 'none');
             xlabel('Time [s]');
@@ -169,11 +170,12 @@ for iMeas = 1:nMeas
 
         case 'Sprung'
             % get variables
-            targetDist = Measurements.Data(iMeas).targetDist;
-            Jerk = Measurements.Data(iMeas).Jerk;
-            targetError = Measurements.Observations(iMeas).targetError;
-            jumpStopPos = Measurements.Data(iMeas).jumpStopPos;
-            [~, targetIdx] = min(targetDist);
+            Time = Measurements.MotorData(iMeas).Time;
+            Deviation = Measurements.MotorData(iMeas).Deviation;
+            Jerk = Measurements.MotorData(iMeas).Jerk;
+            TargetError = Measurements.MotorMetrics.TargetError(iMeas);
+            jumpStopPos = Measurements.MotorData(iMeas).jumpStopPos;
+            [~, targetIdx] = min(Deviation);
 
             % plot COP path with jump stop position
             iPlot = iPlot+1;
@@ -194,12 +196,12 @@ for iMeas = 1:nMeas
             % plot distance to jump stop position
             iPlot = iPlot+1;
             subplot(nRows, nCols, plotIdx(iPlot));
-            plot(Time', targetDist');
+            plot(Time', Deviation');
             hold on
             xline(Time(targetIdx), 'red');
             xlim([Time(1), Time(end)]);
             yl = ylim;
-            text(Time(end), max(yl), sprintf('targetError = %.0f mm', targetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
+            text(Time(end), max(yl), sprintf('targetError = %.0f mm', TargetError * 1000), 'VerticalAlignment', 'top', 'HorizontalAlignment', 'right');
             title(sprintf('Distance from landing to jump stop pos'), 'Interpreter', 'none');
             xlabel('Time [s]');
             ylabel('Distance [m]');
@@ -223,7 +225,7 @@ for iMeas = 1:nMeas
     nProc = nProc+1;
 
     % set flag
-    Measurements.Observations(iMeas).donePlots = 1;
+    Measurements.MotorData(iMeas).donePlots = 1;
 
     % save figure
     ftypes = {'pdf', 'png'};
