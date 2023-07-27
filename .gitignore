@@ -1,0 +1,25 @@
+# generic temp files
+*.tmp
+# CSV temp file
+*.csv\#
+# Word temp files
+~$*.doc*
+# Excel temp files
+~$*.xls*
+# PowerPoint temp files
+~$*.ppt*
+# Matlab Simulink cache files
+slprj/
+*.slxc
+# Matlab temp files
+*.asc
+# Matlab workspace image
+matlab.mat
+*.asv
+# Matlab compiled version
+MyonardoPro/MyonardoPro/
+MyonardoPro/MyonardoPro_resources/
+MyonardoPro/compiled/
+*.DS_Store
+# OpenOffice Tempfiles
+*.~*
