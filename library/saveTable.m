@@ -1,10 +1,10 @@
 function saveTable(myTable, fname, fext, fdir)
 
-if nargin < 3
+if nargin < 4
     fdir = '.';
 end
 
-if nargin < 2
+if nargin < 3
     fext = '.xlsx';
 end
 
