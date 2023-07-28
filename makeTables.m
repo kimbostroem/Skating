@@ -119,7 +119,6 @@ subjectVariables_orig = Measurements.Subjects.Properties.VariableNames;
 subjectVariables_clean = [
     "Subject"
     "ADHS"
-    "ADS"
     "Diagnose"
     "Sex"
     "Age_yrs"
@@ -200,17 +199,6 @@ TargetTable = struct2table(TargetTable);
 SkatingTable_long = TargetTable;
 
 %% Fill in missing values that can be derived
-
-% replace missing Diagnose with ADHS
-nRows = size(SkatingTable_long, 1);
-for iRow = 1:nRows
-    variable = 'Diagnose';
-    fillValue = 2;
-    value = SkatingTable_long{iRow, variable};
-    if isnan(value)
-        SkatingTable_long.(variable)(iRow) = fillValue;
-    end
-end
 
 % replace missing height at some stage with mean of heights of all stages
 SourceTable = SkatingTable_long;
