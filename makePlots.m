@@ -7,6 +7,20 @@ outDir = evalin('base', 'outDir');
 
 fprintf('Make plots...\n');
 ticAll = tic;
+
+% create figure output folders
+figTypes = {'pdf', 'png'};
+nFigTypes = length(figTypes);
+figDirs = cell(nFigTypes, 1);
+for iFigType = 1:nFigTypes
+    figType = figTypes{iFigType};
+    figDir = fullfile(outDir, ['figures_', figType]);
+    if ~isfolder(figDir)
+        mkdir(figDir);
+    end
+    figDirs{iFigType} = figDir;
+end
+
 nProc = 0; % init number of processed files
 nMeas = length(Measurements.MotorData);
 for iMeas = 1:nMeas
@@ -14,21 +28,23 @@ for iMeas = 1:nMeas
 
     % get variables
     fileName = Measurements.MotorData(iMeas).fileName;
+
+    % if figure already exists -> skip
+    outpaths = fullfile(figDirs, strcat([fileName, '.'], figTypes)');
+    if all(isfile(outpaths))
+        continue
+    end
+
+     % report progress
+    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
+    
+    % get data
     Time = Measurements.MotorData(iMeas).Time;
     Force = Measurements.MotorData(iMeas).Force;
     COP = Measurements.MotorData(iMeas).COP;
     startPos = Measurements.MotorData(iMeas).startPos;
     stopPos = Measurements.MotorData(iMeas).stopPos;
-    task = Measurements.MotorMetrics.Task(iMeas); 
-
-    if isfield(Measurements.MotorData(iMeas), 'donePlots') && ~isempty(Measurements.MotorData(iMeas).donePlots) && Measurements.MotorData(iMeas).donePlots
-        continue
-    else
-        Measurements.MotorData(iMeas).donePlots = 0;
-    end
-
-    % report progress
-    fprintf('\t-> %s (%d/%d = %.0f%%)\n', fileName, iMeas, nMeas, iMeas/nMeas*100);
+    task = Measurements.MotorMetrics.Task(iMeas);   
 
     % setup figure
     nRows = 3;
@@ -223,20 +239,13 @@ for iMeas = 1:nMeas
 
     % increment number of processed files
     nProc = nProc+1;
-
-    % set flag
-    Measurements.MotorData(iMeas).donePlots = 1;
-
+    
     % save figure
-    ftypes = {'pdf', 'png'};
-    for iType = 1:length(ftypes)
-        ftype = ftypes{iType};
-        myOutDir = fullfile(outDir, ['figures_', ftype]);
-        if ~isfolder(myOutDir)
-            mkdir(myOutDir);
-        end
-        outpath = fullfile(myOutDir, fileName);
-        saveFigure(fig, outpath, ftype);
+    for iFigType = 1:nFigTypes
+        figType = figTypes{iFigType};
+        figDir = figDirs{iFigType};
+        outpath = fullfile(figDir, fileName);
+        saveFigure(fig, outpath, figType);
     end
     close(fig);
 
