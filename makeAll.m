@@ -4,8 +4,8 @@ makeMotorData;
 makeMotorMetrics;
 makeCognitionData;
 makeTables;
-% makePlots;
 saveState;
+makePlots;
 
 
 
