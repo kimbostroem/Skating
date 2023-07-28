@@ -93,7 +93,6 @@ for iMeas = 1:nMeas
         case 'Balance'
 
             % get variables
-            Time = Measurements.MotorData(iMeas).Time;
             Deviation = Measurements.MotorData(iMeas).Deviation;
             Jerk = Measurements.MotorData(iMeas).Jerk;
             TargetError = Measurements.MotorMetrics.TargetError(iMeas);
@@ -143,7 +142,6 @@ for iMeas = 1:nMeas
 
         case 'Einbein'
             % get variables
-            Time = Measurements.MotorData(iMeas).Time;
             Deviation = Measurements.MotorData(iMeas).Deviation;
             Jerk = Measurements.MotorData(iMeas).Jerk;
             TargetError = Measurements.MotorMetrics.TargetError(iMeas);
@@ -186,7 +184,6 @@ for iMeas = 1:nMeas
 
         case 'Sprung'
             % get variables
-            Time = Measurements.MotorData(iMeas).Time;
             Deviation = Measurements.MotorData(iMeas).Deviation;
             Jerk = Measurements.MotorData(iMeas).Jerk;
             TargetError = Measurements.MotorMetrics.TargetError(iMeas);
@@ -249,14 +246,10 @@ for iMeas = 1:nMeas
     end
     close(fig);
 
-    % export Measurements structure to base workspace
-    fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
-    assignin('base', 'Measurements', Measurements);
-
+    % report item finish
     fprintf('\t\tFinished in %.3f s\n', toc(ticItem));
 end
 
 fprintf('Finished plotting from %d datasets in %.3f s\n\n', nProc, toc(ticAll));
-fprintf('If necessary, save current state using ''saveState''\n');
 
 end
