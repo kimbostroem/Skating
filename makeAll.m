@@ -1,11 +1,11 @@
 init;
 makeSubjects;
-makeMotorData;
+% makeMotorData;
 makeMotorMetrics;
 makeCognitionData;
 makeTables;
 saveState;
-makePlots;
+% makePlots;
 
 
 
