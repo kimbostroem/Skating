@@ -303,13 +303,6 @@ SkatingTable_wide = TargetTable;
 Measurements.SkatingTable_long = SkatingTable_long;
 Measurements.SkatingTable_wide = SkatingTable_wide;
 
-%% Create Skating PB tables (only subjects from the PB group)
-
-fprintf('\t\t- Creating PB tables...\n');
-SkatingTable_PB_long = SkatingTable_long(startsWith(SkatingTable_long.Subject, 'PB'), :);
-SkatingTable_PB_wide = SkatingTable_long(startsWith(SkatingTable_wide.Subject, 'PB'), :);
-
-
 %% save Measurements structure
 
 % export Measurements structure to base workspace
@@ -337,14 +330,6 @@ saveTable(SkatingTable_long, 'SkatingTable_long', {'csv'}, outDir);
 % write Skating table in wide format
 fprintf('Saving Skating table in wide format...\n');
 saveTable(SkatingTable_wide, 'SkatingTable_wide', {'csv'}, outDir);
-
-% write Skating PB table in long format
-fprintf('Saving Skating PB table in long format...\n');
-saveTable(SkatingTable_PB_long, 'SkatingTable_PB_long', {'csv'}, outDir);
-
-% write Skating PB table in wide format
-fprintf('Saving Skating PB table in wide format...\n');
-saveTable(SkatingTable_PB_wide, 'SkatingTable_PB_wide', {'csv'}, outDir);
 
 fprintf('If necessary, save current state using ''saveState''\n');
 
