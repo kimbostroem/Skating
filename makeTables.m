@@ -34,8 +34,9 @@ MotorTable_all = removevars(MotorTable_all, myRmVars);
 
 %% Motor table
 
+stages = unique(MotorTable_all.Stage, 'stable');
+
 % tasks = unique(MotorTable_all.Task, 'stable');
-% stages = unique(MotorTable_all.Stage, 'stable');
 % SourceTable = MotorTable_all;
 % TargetTable = struct([]);
 % iRow = 1;
@@ -155,9 +156,10 @@ for iSubject = 1:length(subjects)
         if isempty(stageMotorTable) || isempty(stageCognitionTable)
             continue
         end
-        if size(stageMotorTable, 1) > 1
-            warning('Motor table contains for subject %s and stage %d more than 1 entry -> skip additional entries\n', subject, stage);
-        end
+        nMotorTrials = size(stageMotorTable, 1);
+        % if nMotorTrials > 1
+        %     warning('Motor table contains for subject %s and stage %d more than 1 entry -> skip additional entries\n', subject, stage);
+        % end
         if size(stageCognitionTable, 1) > 1
             warning('Cognition table contains for subject %s and stage %d more than 1 entry -> skip additional entries\n', subject, stage);
         end
@@ -168,8 +170,11 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            for iSubrow = 1:nMotorTrials
+                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            end
             allVariables = union(allVariables, {variable}, 'stable');
+            
         end
 
         % append motor data
@@ -177,7 +182,9 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            for iSubrow = 1:nMotorTrials
+                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            end
             allVariables = union(allVariables, {variable}, 'stable');
         end
 
@@ -186,25 +193,27 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            for iSubrow = 1:nMotorTrials
+                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            end
             allVariables = union(allVariables, {variable}, 'stable');
             % update list of dependent variables
             depVars = union(depVars, {variable}, 'stable');
         end
         
         % increment row index
-        iRow = iRow + 1;
+        iRow = iRow + nMotorTrials;
     end
 end
 % convert structure array to table
 TargetTable = struct2table(TargetTable);
-SkatingTable_long = TargetTable;
+SkatingTable = TargetTable;
 
 %% Fill in missing values that can be derived
 
 % replace missing height at some stage with mean of heights of all stages
-SourceTable = SkatingTable_long;
-TargetTable = SkatingTable_long;
+SourceTable = SkatingTable;
+TargetTable = SkatingTable;
 subjects = unique(Measurements.Subjects.Subject, 'stable');
 nSubjects = length(subjects);
 for iSubject = 1:nSubjects
@@ -224,7 +233,7 @@ for iSubject = 1:nSubjects
         end
     end
 end
-SkatingTable_long = TargetTable;
+SkatingTable = TargetTable;
 
 %% Rename variables
 
@@ -248,66 +257,64 @@ renameVariables_new = [
     "ColorBar"
     "Stroop"
     ];
-SkatingTable_long = renamevars(SkatingTable_long, renameVariables_old, renameVariables_new);
+SkatingTable = renamevars(SkatingTable, renameVariables_old, renameVariables_new);
 for iVar = 1:length(renameVariables_old)
     depVars = cellstr(strrep(depVars, renameVariables_old(iVar), renameVariables_new(iVar)));
 end
 
-%% Combined table wide format (pre and post values in columns)
+Measurements.SkatingTable = SkatingTable;
 
-SourceTable = SkatingTable_long;
-TargetTable = struct([]);
-nSubjects = length(subjects);
-iRow = 1;
-for iSubject = 1:nSubjects
-    subject = subjects{iSubject};
-    subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
-    if isempty(subjectSourceTable)
-        continue
-    end
-    tic
-    initRow = table2struct(subjectSourceTable(1, :));
-    variables = setdiff(fieldnames(initRow), [depVars, {'Stage'}], 'stable');
-    for iVar = 1:length(variables)
-        variable = variables{iVar};
-        TargetTable(iRow).(variable) = initRow.(variable);
-    end
-    for iVar = 1:length(depVars)
-        depVar = depVars{iVar};
-        % pre
-        value = subjectSourceTable.(depVar)(subjectSourceTable.Stage == stages(1));
-        if isempty(value)
-            value = NaN;
-        elseif iscell(value)
-            value = cell2mat(value);
-        end
-        TargetTable(iRow).([depVar, '_pre']) = value;
-        % post
-        value = subjectSourceTable.(depVar)(subjectSourceTable.Stage == stages(2));
-        if isempty(value)
-            value = NaN;
-        elseif iscell(value)
-            value = cell2mat(value);
-        end
-        TargetTable(iRow).([depVar, '_post']) = value;
-        % post - pre
-        TargetTable(iRow).([depVar, '_diff']) = (TargetTable(iRow).([depVar, '_post']) - TargetTable(iRow).([depVar, '_pre']));
-    end
-
-    % report progress
-    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', subject, iSubject, nSubjects, iSubject/nSubjects*100, toc);
-
-    % increment row index
-    iRow = iRow + 1;
-end
-% convert structure array to table
-TargetTable = struct2table(TargetTable);
-SkatingTable_wide = TargetTable;
-
-%% Append tables to Measurements structure
-
-Measurements.SkatingTable_long = SkatingTable_long;
-Measurements.SkatingTable_wide = SkatingTable_wide;
+% %% Combined table wide format (pre and post values in columns)
+% 
+% SourceTable = SkatingTable;
+% TargetTable = struct([]);
+% nSubjects = length(subjects);
+% iRow = 1;
+% for iSubject = 1:nSubjects
+%     subject = subjects{iSubject};
+%     subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
+%     if isempty(subjectSourceTable)
+%         continue
+%     end
+%     tic
+%     initRow = table2struct(subjectSourceTable(1, :));
+%     variables = setdiff(fieldnames(initRow), [depVars, {'Stage'}], 'stable');
+%     for iVar = 1:length(variables)
+%         variable = variables{iVar};
+%         TargetTable(iRow).(variable) = initRow.(variable);
+%     end
+%     for iVar = 1:length(depVars)
+%         depVar = depVars{iVar};
+%         % pre
+%         value = subjectSourceTable.(depVar)(subjectSourceTable.Stage == stages(1));
+%         if isempty(value)
+%             value = NaN;
+%         elseif iscell(value)
+%             value = cell2mat(value);
+%         end
+%         TargetTable(iRow).([depVar, '_pre']) = value;
+%         % post
+%         value = subjectSourceTable.(depVar)(subjectSourceTable.Stage == stages(2));
+%         if isempty(value)
+%             value = NaN;
+%         elseif iscell(value)
+%             value = cell2mat(value);
+%         end
+%         TargetTable(iRow).([depVar, '_post']) = value;
+%         % post - pre
+%         TargetTable(iRow).([depVar, '_diff']) = (TargetTable(iRow).([depVar, '_post']) - TargetTable(iRow).([depVar, '_pre']));
+%     end
+% 
+%     % report progress
+%     fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', subject, iSubject, nSubjects, iSubject/nSubjects*100, toc);
+% 
+%     % increment row index
+%     iRow = iRow + 1;
+% end
+% % convert structure array to table
+% TargetTable = struct2table(TargetTable);
+% SkatingTable_wide = TargetTable;
+% Measurements.SkatingTable_wide = SkatingTable_wide;
 
 %% save Measurements structure
 
@@ -331,11 +338,11 @@ saveTable(Measurements.CognitionData, 'CognitionTable', {'xlsx'}, outDir);
 
 % write Skating table in long format
 fprintf('Saving Skating table in long format...\n');
-saveTable(SkatingTable_long, 'SkatingTable_long', {'csv'}, outDir);
+saveTable(SkatingTable, 'SkatingTable', {'csv'}, outDir);
 
-% write Skating table in wide format
-fprintf('Saving Skating table in wide format...\n');
-saveTable(SkatingTable_wide, 'SkatingTable_wide', {'csv'}, outDir);
+% % write Skating table in wide format
+% fprintf('Saving Skating table in wide format...\n');
+% saveTable(SkatingTable_wide, 'SkatingTable_wide', {'csv'}, outDir);
 
 fprintf('If necessary, save current state using ''saveState''\n');
 
