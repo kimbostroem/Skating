@@ -38,6 +38,9 @@ for iSubject = 1:nSubjects
     subject = subjects{iSubject};
     idx = find(MotorTable.Subject == string(subject));
     variable = 'Height';
+    if ~ismember(variable, MotorTable.Properties.VariableNames)
+        continue
+    end
     myCell = MotorTable{idx, variable};
     if iscell(myCell)
         idxNaN = cellfun(@(x) any(isempty(x)), myCell);
