@@ -36,63 +36,57 @@ MotorTable_all = removevars(MotorTable_all, myRmVars);
 
 stages = unique(MotorTable_all.Stage, 'stable');
 
-% tasks = unique(MotorTable_all.Task, 'stable');
-% SourceTable = MotorTable_all;
-% TargetTable = struct([]);
-% iRow = 1;
-% newDepVars = {};
-% for iSubject = 1:length(subjects)
-%     subject = subjects{iSubject};
-%     subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
-%     for iStage = 1:length(stages)
-%         stage = stages(iStage);
-%         stageTable = subjectSourceTable(subjectSourceTable.Stage == stage, :);
-%         if isempty(stageTable)
-%             continue
-%         end
-%         for iTask = 1:length(tasks)
-%             task = tasks{iTask};
-%             taskTable = stageTable(stageTable.Task == task, :);
-%             if isempty(taskTable)
-%                 continue
-%             end
-%             initRow = table2struct(taskTable(1, :));
-%             allVariables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
-%             for iVar = 1:length(allVariables)
-%                 variable = allVariables{iVar};
-%                 TargetTable(iRow).(variable) = initRow.(variable);
-%             end
-%             for iVar = 1:length(depVars)
-%                 depVar = depVars{iVar};
-%                 values = taskTable.(depVar);
-%                 newDepVar = sprintf('%s_%s', task, depVar);
-%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-%                 TargetTable(iRow).(newDepVar) = mean(values, 'omitnan');
-%                 value = std(values, 'omitnan');
-%                 if value == 0
-%                     value = NaN;
-%                 end
-%                 newDepVar = sprintf('%s_%s_std', task, depVar);
-%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-%                 TargetTable(iRow).(newDepVar) = value;
-%                 newDepVar = sprintf('%s_%s_n', task, depVar);
-%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-%                 TargetTable(iRow).(newDepVar) = length(values);
-%             end
-%         end
-%         % increment row index
-%         iRow = iRow + 1;
-%     end
-% end
-% % update list of dependent variables
-% depVars = newDepVars;
-% % convert structure array to table
-% TargetTable = struct2table(TargetTable);
-% % clean up
-% TargetTable = removevars(TargetTable, {'Trial', 'Side', 'FileName'});
-% MotorTable_long = TargetTable;
-
-MotorTable_long = MotorTable_all;
+tasks = unique(MotorTable_all.Task, 'stable');
+SourceTable = MotorTable_all;
+TargetTable = struct([]);
+iRow = 1;
+newDepVars = {};
+for iSubject = 1:length(subjects)
+    subject = subjects{iSubject};
+    subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
+    for iStage = 1:length(stages)
+        stage = stages(iStage);
+        stageTable = subjectSourceTable(subjectSourceTable.Stage == stage, :);
+        if isempty(stageTable)
+            continue
+        end
+        for iTask = 1:length(tasks)
+            task = tasks{iTask};
+            taskTable = stageTable(stageTable.Task == task, :);
+            if isempty(taskTable)
+                continue
+            end
+            initRow = table2struct(taskTable(1, :));
+            allVariables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
+            nAttempts = size(taskTable, 1);
+            for iAttempt = 1:nAttempts
+                TargetTable(iRow+iAttempt-1).Attempt = iAttempt;
+            end
+            for iVar = 1:length(allVariables)
+                variable = allVariables{iVar};
+                values = taskTable.(variable);
+                for iAttempt = 1:nAttempts
+                    TargetTable(iRow+iAttempt-1).(variable) = values(iAttempt);
+                end
+            end
+            for iVar = 1:length(depVars)
+                depVar = depVars{iVar};
+                newDepVar = sprintf('%s_%s', task, depVar);
+                newDepVars = union(newDepVars, {newDepVar}, 'stable');
+                values = taskTable.(depVar);
+                for iAttempt = 1:nAttempts                    
+                    TargetTable(iRow+iAttempt-1).(newDepVar) = values(iAttempt);
+                end
+            end
+        end
+        % increment row index
+        iRow = iRow + nAttempts;
+    end
+end
+depVars = newDepVars;
+% convert structure array to table
+TargetTable = struct2table(TargetTable);
+MotorTable_long = TargetTable;
 
 %% Cognition table
 
@@ -170,8 +164,8 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            for iSubrow = 1:nMotorTrials
-                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            for iAttempt = 1:nMotorTrials
+                TargetTable(iRow+iAttempt-1).(variable) = subjectSourceTable.(variable);
             end
             allVariables = union(allVariables, {variable}, 'stable');
             
@@ -182,8 +176,8 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            for iSubrow = 1:nMotorTrials
-                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            for iAttempt = 1:nMotorTrials
+                TargetTable(iRow+iAttempt-1).(variable) = subjectSourceTable.(variable);
             end
             allVariables = union(allVariables, {variable}, 'stable');
         end
@@ -193,8 +187,8 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            for iSubrow = 1:nMotorTrials
-                TargetTable(iRow+iSubrow-1).(variable) = subjectSourceTable.(variable);
+            for iAttempt = 1:nMotorTrials
+                TargetTable(iRow+iAttempt-1).(variable) = subjectSourceTable.(variable);
             end
             allVariables = union(allVariables, {variable}, 'stable');
             % update list of dependent variables
