@@ -34,62 +34,64 @@ MotorTable_all = removevars(MotorTable_all, myRmVars);
 
 %% Motor table
 
-tasks = unique(MotorTable_all.Task, 'stable');
-stages = unique(MotorTable_all.Stage, 'stable');
-SourceTable = MotorTable_all;
-TargetTable = struct([]);
-iRow = 1;
-newDepVars = {};
-for iSubject = 1:length(subjects)
-    subject = subjects{iSubject};
-    subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
-    for iStage = 1:length(stages)
-        stage = stages(iStage);
-        stageTable = subjectSourceTable(subjectSourceTable.Stage == stage, :);
-        if isempty(stageTable)
-            continue
-        end
-        for iTask = 1:length(tasks)
-            task = tasks{iTask};
-            taskTable = stageTable(stageTable.Task == task, :);
-            if isempty(taskTable)
-                continue
-            end
-            initRow = table2struct(taskTable(1, :));
-            allVariables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
-            for iVar = 1:length(allVariables)
-                variable = allVariables{iVar};
-                TargetTable(iRow).(variable) = initRow.(variable);
-            end
-            for iVar = 1:length(depVars)
-                depVar = depVars{iVar};
-                values = taskTable.(depVar);
-                newDepVar = sprintf('%s_%s', task, depVar);
-                newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = mean(values, 'omitnan');
-                value = std(values, 'omitnan');
-                if value == 0
-                    value = NaN;
-                end
-                newDepVar = sprintf('%s_%s_std', task, depVar);
-                newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = value;
-                newDepVar = sprintf('%s_%s_n', task, depVar);
-                newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = length(values);
-            end
-        end
-        % increment row index
-        iRow = iRow + 1;
-    end
-end
-% update list of dependent variables
-depVars = newDepVars;
-% convert structure array to table
-TargetTable = struct2table(TargetTable);
-% clean up
-TargetTable = removevars(TargetTable, {'Trial', 'Side', 'FileName'});
-MotorTable_long = TargetTable;
+% tasks = unique(MotorTable_all.Task, 'stable');
+% stages = unique(MotorTable_all.Stage, 'stable');
+% SourceTable = MotorTable_all;
+% TargetTable = struct([]);
+% iRow = 1;
+% newDepVars = {};
+% for iSubject = 1:length(subjects)
+%     subject = subjects{iSubject};
+%     subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
+%     for iStage = 1:length(stages)
+%         stage = stages(iStage);
+%         stageTable = subjectSourceTable(subjectSourceTable.Stage == stage, :);
+%         if isempty(stageTable)
+%             continue
+%         end
+%         for iTask = 1:length(tasks)
+%             task = tasks{iTask};
+%             taskTable = stageTable(stageTable.Task == task, :);
+%             if isempty(taskTable)
+%                 continue
+%             end
+%             initRow = table2struct(taskTable(1, :));
+%             allVariables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
+%             for iVar = 1:length(allVariables)
+%                 variable = allVariables{iVar};
+%                 TargetTable(iRow).(variable) = initRow.(variable);
+%             end
+%             for iVar = 1:length(depVars)
+%                 depVar = depVars{iVar};
+%                 values = taskTable.(depVar);
+%                 newDepVar = sprintf('%s_%s', task, depVar);
+%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
+%                 TargetTable(iRow).(newDepVar) = mean(values, 'omitnan');
+%                 value = std(values, 'omitnan');
+%                 if value == 0
+%                     value = NaN;
+%                 end
+%                 newDepVar = sprintf('%s_%s_std', task, depVar);
+%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
+%                 TargetTable(iRow).(newDepVar) = value;
+%                 newDepVar = sprintf('%s_%s_n', task, depVar);
+%                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
+%                 TargetTable(iRow).(newDepVar) = length(values);
+%             end
+%         end
+%         % increment row index
+%         iRow = iRow + 1;
+%     end
+% end
+% % update list of dependent variables
+% depVars = newDepVars;
+% % convert structure array to table
+% TargetTable = struct2table(TargetTable);
+% % clean up
+% TargetTable = removevars(TargetTable, {'Trial', 'Side', 'FileName'});
+% MotorTable_long = TargetTable;
+
+MotorTable_long = MotorTable_all;
 
 %% Cognition table
 
