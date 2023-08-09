@@ -210,7 +210,11 @@ for iSubject = 1:nSubjects
     idx = find(SourceTable.Subject == string(subject));
     variable = 'Height';
     myCell = SourceTable{idx, variable};
-    idxNaN = cellfun(@(x) any(isempty(x)), myCell);
+    if iscell(myCell)
+        idxNaN = cellfun(@(x) any(isempty(x)), myCell);
+    else
+        idxNaN = arrayfun(@(x) any(isempty(x)), myCell);
+    end
     if any(idxNaN)
         fillValue = mean(cell2mat(myCell), 'omitnan');
         for iIdx = 1:length(idx)
