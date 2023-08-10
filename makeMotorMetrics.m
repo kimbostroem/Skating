@@ -17,7 +17,6 @@ fprintf('Create metrics...\n');
 ticAll = tic;
 item = 1; 
 MotorMetrics = struct([]);
-estimatedBeam = 0;
 for iFile = 1:nFiles    
     fname = Measurements.MotorData(iFile).fileName;
 
@@ -137,16 +136,13 @@ for iFile = 1:nFiles
                 % deviation = sum(vecnorm(diff(COPy, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
                 
                 % estimate beam function for calculation of distance
-                if ~estimatedBeam
-                    polyOrder = 0; % 0 = fixed distance from x-axis, 1 = line with slope
-                    coefficients = polyfit(COPx(idxContact), COPy(idxContact), polyOrder);
-                    beamYFcn = @(x) polyval(coefficients, x);
-                    % method 1 using fminsearch (faster)
-                    options = optimset('Display', 'off');
-                    ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);
-                    estimatedBeam = 1; % set flag that estimation is done
-                    fprintf('Succesfully estimated beam distance at %fm\n', coefficients);
-                end
+                polyOrder = 1; % 0 = fixed distance from x-axis, 1 = line with slope
+                coefficients = polyfit(COPx(idxContact), COPy(idxContact), polyOrder);
+                beamYFcn = @(x) polyval(coefficients, x);
+                % method 1 using fminsearch (faster)
+                options = optimset('Display', 'off');
+                ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);
+                fprintf('\tSuccesfully estimated beam distance at %fm with slope %f\n', coefficients(1), coefficients(2));
 
                 nSamples = size(COPx, 2);
                 deviation = nan(1, nSamples);
