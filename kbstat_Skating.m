@@ -53,18 +53,18 @@ options.errorBars = 'se';
 
 %% Analysis
 
-depVars = {'Jerk', 'TargetError'};
-tasks = {'Balance', 'Sprung'};
-depVarUnitss = {'m/s^3', 'm'};
-distributions = {'gamma', 'gamma'};
-links = {'', ''};
+depVars = {'Jerk', 'TargetError', 'PathLength'};
+depVarUnitss = {'m/s^3', 'm', 'm'};
+tasks = {'Balance', 'Sprung', 'Einbein'};
+distributions = {'gamma', 'gamma', 'gamma'};
+links = {'', '', ''};
 meanFlags = [1, 0];
 kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
 
-depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
-tasks = '';
-depVarUnitss = {'', '', '', ''};
-distributions = {'gamma', 'gamma', 'normal', 'normal'};
-links = {'', '', '', ''};
-meanFlags = [1, 0];
-kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
+% depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
+% tasks = '';
+% depVarUnitss = {'', '', '', ''};
+% distributions = {'gamma', 'gamma', 'normal', 'normal'};
+% links = {'', '', '', ''};
+% meanFlags = 0;
+% kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
