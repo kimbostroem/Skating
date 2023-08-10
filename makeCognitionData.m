@@ -7,24 +7,24 @@ fprintf('\nMaking Cognition Data...\n');
 Measurements = loadState();
 
 cogDir = evalin('base', 'cogDir');
-CognitionTable = readtable(fullfile(cogDir, 'Kognitiv.xlsx'), 'VariableNamesRange', '3:3', 'TextType','string');
+CognitionData = readtable(fullfile(cogDir, 'Kognitiv.xlsx'), 'VariableNamesRange', '3:3', 'TextType','string');
 
 % convert subject code (including the stage number) to subject ID
 subjectVar = "Probandencode";
-subjectCodes = CognitionTable.(subjectVar);
+subjectCodes = CognitionData.(subjectVar);
 subjectIDs = arrayfun(@(x) regexprep(x, '(\w*)_\w*', '$1'), subjectCodes);
-CognitionTable.(subjectVar) = subjectIDs;
-CognitionTable = renamevars(CognitionTable, 'Probandencode', 'Subject');
+CognitionData.(subjectVar) = subjectIDs;
+CognitionData = renamevars(CognitionData, 'Probandencode', 'Subject');
 
 % delete excluded subjects
 Subjects = Measurements.Subjects;
-excludedSubjects = setdiff(CognitionTable.Subject, Subjects.Subject);
-idx = cell2mat(cellfun(@(x) ismember(x, excludedSubjects), CognitionTable.Subject, 'un', 0));
-CognitionTable(idx,:) = [];
+excludedSubjects = setdiff(CognitionData.Subject, Subjects.Subject);
+idx = cell2mat(cellfun(@(x) ismember(x, excludedSubjects), CognitionData.Subject, 'un', 0));
+CognitionData(idx,:) = [];
 fprintf('Excluded %d subjects from Cognition table that did not appear in Subjects table\n', length(excludedSubjects));
 
 % append CognitionData to Measurements structure
-Measurements.CognitionData = CognitionTable;
+Measurements.CognitionData = CognitionData;
 
 % export Measurements structure to base workspace
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
