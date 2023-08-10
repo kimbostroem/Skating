@@ -22,6 +22,8 @@
 %                       'reciprocal'	g(mu) = mu.^(-1)
 %                       Scalar p	    g(mu) = mu.^p           Canonical for Gamma (p = -1) and InverseGaussian (p= -2)
 
+%% Init
+
 fprintf('Initializing...\n');
 
 % clear workspace
@@ -33,11 +35,11 @@ restoredefaultpath;
 
 % add library and subfolders to path
 addpath(genpath('../kbstat'));
-resultsDir = '../Results';
+resultsDir = '../Skating_Stats';
 
+%% Global options
 
 options = struct;
-options.inFile = 'SkatingTable_long.csv';
 options.x = 'Intervention, ADHS';
 options.id = 'Subject';
 options.within = 'Intervention';
@@ -46,54 +48,23 @@ options.posthocMethod = 'ttest';
 options.removeOutliers = 'true';
 options.isRescale = true;
 options.errorBars = 'se';
-% options.constraint = 'Stage < 3';
+options.constraint = '';
 % options.constraint = 'Medication == 0';
 
-depVar = 'Balance_Jerk';
-options.yUnits = 'm/s^3';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'gamma';
-kbstat(options);
+%% Analysis
 
-depVar = 'Balance_TargetError';
-options.yUnits = 'm';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'gamma';
-kbstat(options);
+depVars = {'Jerk', 'TargetError'};
+tasks = {'Balance', 'Sprung'};
+depVarUnitss = {'m/s^3', 'm'};
+distributions = {'gamma', 'gamma'};
+links = {'', ''};
+meanFlags = [1, 0];
+kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
 
-depVar = 'Sprung_TargetError';
-options.yUnits = 'm';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'gamma';
-kbstat(options);
-
-depVar = 'D2_Error';
-options.yUnits = '';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'gamma';
-kbstat(options);
-
-depVar = 'Stroop';
-options.yUnits = '';
-options.outDir = sprintf('../Results/%s', depVar);
-options.y = depVar;
-options.distribution = 'gamma';
-kbstat(options);
-
-depVar = 'AttentionDeficit';
-options.yUnits = '';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'normal';
-kbstat(options);
-
-depVar = 'Hyperactivity';
-options.yUnits = '';
-options.outDir = sprintf('%s/%s', resultsDir, depVar);
-options.y = depVar;
-options.distribution = 'normal';
-kbstat(options);
+depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
+tasks = '';
+depVarUnitss = {'', '', '', ''};
+distributions = {'gamma', 'gamma', 'normal', 'normal'};
+links = {'', '', '', ''};
+meanFlags = [1, 0];
+kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
