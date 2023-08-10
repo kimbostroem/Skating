@@ -48,8 +48,8 @@ options.posthocMethod = 'ttest';
 options.removeOutliers = 'true';
 options.isRescale = true;
 options.errorBars = 'se';
-options.constraint = '';
 % options.constraint = 'Medication == 0';
+% options.constraint = 'ADHS == 1 & Stage == 2';
 
 %% Analysis
 
