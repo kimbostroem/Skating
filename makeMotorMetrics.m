@@ -132,33 +132,36 @@ for iFile = 1:nFiles
                 tic
                 COPx = COP(1, :);
                 COPy = COP(2, :);
-                nSamples = size(COPx, 2);
-                polyOrder = 1;
-                coefficients = polyfit(COPx(idxContact), COPy(idxContact), polyOrder);
-                beamYFcn = @(x) polyval(coefficients, x);
+                
+                deviation = sum(vecnorm(diff(COPy, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
+                
+                % nSamples = size(COPx, 2);
+                % polyOrder = 1;
+                % coefficients = polyfit(COPx(idxContact), COPy(idxContact), polyOrder);
+                % beamYFcn = @(x) polyval(coefficients, x);
+                % % method 1 using fminsearch (faster)
+                % options = optimset('Display', 'off');
+                % ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);                
+                % deviation = nan(1, nSamples);
+                % exitflag = 1;
+                % for iSample = 1:nSamples
+                %     if ~idxContact(iSample)
+                %         continue
+                %     end
+                %     minFcn = @(x_) ppdistanceFcn(COPx(iSample), COPy(iSample), x_);
+                %     [~, deviation(iSample), exitflag] = fminsearch(minFcn, COPx(iSample), options);
+                %      if exitflag <= 0
+                %          break
+                %      end
+                % end
+                % if exitflag <= 0
+                %     % method 2 using min (slower)
+                %     BeamX = linspace(min(COPx), max(COPx), nSamples);
+                %     BeamY = beamYFcn(BeamX);
+                %     distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
+                %     deviation = arrayfun(distanceFcn, COPx, COPy);
+                % end
 
-                % method 1 using fminsearch (faster)
-                options = optimset('Display', 'off');
-                ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);                
-                deviation = nan(1, nSamples);
-                exitflag = 1;
-                for iSample = 1:nSamples
-                    if ~idxContact(iSample)
-                        continue
-                    end
-                    minFcn = @(x_) ppdistanceFcn(COPx(iSample), COPy(iSample), x_);
-                    [~, deviation(iSample), exitflag] = fminsearch(minFcn, COPx(iSample), options);
-                     if exitflag <= 0
-                         break
-                     end
-                end
-                if exitflag <= 0
-                    % method 2 using min (slower)
-                    BeamX = linspace(min(COPx), max(COPx), nSamples);
-                    BeamY = beamYFcn(BeamX);
-                    distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
-                    deviation = arrayfun(distanceFcn, COPx, COPy);
-                end
                 targetError = mean(deviation, 'omitnan');
         case 'Einbein'
                 meanCOP = mean(COP, 2, 'omitnan');
