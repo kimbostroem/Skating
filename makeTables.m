@@ -63,7 +63,7 @@ Measurements.MotorTable = MotorTable;
 tasks = unique(MotorTable.Task, 'stable');
 stages = unique(MotorTable.Stage, 'stable');
 SourceTable = MotorTable;
-TargetTable = struct([]);
+SkatingTable = struct([]);
 iRow = 1;
 newDepVars = {};
 for iSubject = 1:length(subjects)
@@ -85,24 +85,24 @@ for iSubject = 1:length(subjects)
             allVariables = setdiff(fieldnames(initRow), [depVars, {'Task'}], 'stable');
             for iVar = 1:length(allVariables)
                 variable = allVariables{iVar};
-                TargetTable(iRow).(variable) = initRow.(variable);
+                SkatingTable(iRow).(variable) = initRow.(variable);
             end
             for iVar = 1:length(depVars)
                 depVar = depVars{iVar};
                 values = taskTable.(depVar);
                 newDepVar = sprintf('%s_%s', task, depVar);
                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = mean(values, 'omitnan');
+                SkatingTable(iRow).(newDepVar) = mean(values, 'omitnan');
                 value = std(values, 'omitnan');
                 if value == 0
                     value = NaN;
                 end
                 newDepVar = sprintf('%s_%s_std', task, depVar);
                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = value;
+                SkatingTable(iRow).(newDepVar) = value;
                 newDepVar = sprintf('%s_%s_n', task, depVar);
                 newDepVars = union(newDepVars, {newDepVar}, 'stable');
-                TargetTable(iRow).(newDepVar) = length(values);
+                SkatingTable(iRow).(newDepVar) = length(values);
             end
         end
         % increment row index
@@ -112,10 +112,10 @@ end
 % update list of dependent variables
 depVars = newDepVars;
 % convert structure array to table
-TargetTable = struct2table(TargetTable);
+SkatingTable = struct2table(SkatingTable);
 % clean up
-TargetTable = removevars(TargetTable, {'Trial', 'Side', 'FileName'});
-MotorTable_subjectMean = TargetTable;
+SkatingTable = removevars(SkatingTable, {'Trial', 'Side', 'FileName'});
+MotorTable_subjectMean = SkatingTable;
 
 %% Cognition table
 
@@ -137,7 +137,7 @@ cognitionVariables_clean = [
     "Stroop_INT_SW"
     ];
 cognitionVariables = intersect(cognitionVariables_clean, cognitionVariables_orig, 'stable');
-CognitionTable = CognitionTable_orig(:, cognitionVariables);
+CognitionTableClean = CognitionTable_orig(:, cognitionVariables);
 
 % rename variables
 renameVariables_old = [
@@ -160,13 +160,10 @@ renameVariables_new = [
     "ColorBar"
     "Stroop"
     ];
-CognitionTable = renamevars(CognitionTable, renameVariables_old, renameVariables_new);
+CognitionTableClean = renamevars(CognitionTableClean, renameVariables_old, renameVariables_new);
 for iVar = 1:length(renameVariables_old)
     depVars = cellstr(strrep(depVars, renameVariables_old(iVar), renameVariables_new(iVar)));
 end
-
-% append table to Measurements structure
-Measurements.CognitionTable = CognitionTable;
 
 %% Subject table
 
@@ -190,7 +187,8 @@ SubjectTable = Measurements.Subjects(:, subjectVariables);
 
 %% SkatingTable all motor measurements
 
-TargetTable = struct([]);
+SkatingTable = struct([]);
+CognitionTable = struct([]);
 nRows = size(MotorTable, 1);
 for iRow = 1:nRows
     subject = MotorTable.Subject(iRow);
@@ -199,46 +197,52 @@ for iRow = 1:nRows
     variables = subjectData.Properties.VariableNames;
     for iVar = 1:length(variables)
         variable = variables{iVar};
-        TargetTable(iRow).(variable) = subjectData.(variable);
+        SkatingTable(iRow).(variable) = subjectData.(variable);
+        CognitionTable(iRow).(variable) = subjectData.(variable);
     end    
     % add cognition data
     stage = MotorTable.Stage(iRow);
-    cognitionData = CognitionTable(CognitionTable.Subject == subject & CognitionTable.Stage == stage, :);
+    cognitionData = CognitionTableClean(CognitionTableClean.Subject == subject & CognitionTableClean.Stage == stage, :);
     if isempty(cognitionData)
         continue
     end
     variables = cognitionData.Properties.VariableNames;
     for iVar = 1:length(variables)
         variable = variables{iVar};
-        TargetTable(iRow).(variable) = cognitionData.(variable);
+        SkatingTable(iRow).(variable) = cognitionData.(variable);
+        CognitionTable(iRow).(variable) = cognitionData.(variable);
     end
     % add motor data
     motorData = MotorTable(iRow, :);
     variables = motorData.Properties.VariableNames;
     for iVar = 1:length(variables)
         variable = variables{iVar};
-        TargetTable(iRow).(variable) = motorData.(variable);
+        SkatingTable(iRow).(variable) = motorData.(variable);
     end
 end
 
 % convert structure array to table
-SkatingTable = struct2table(TargetTable);
-
+SkatingTable = struct2table(SkatingTable);
 % rename variables
 SkatingTable = renamevars(SkatingTable, 'Task', 'MotorTask');
-
 % append table to Measurements structure
 Measurements.SkatingTable = SkatingTable;
 
+% convert structure array to table
+CognitionTable = struct2table(CognitionTable);
+% append table to Measurements structure
+Measurements.CognitionTable = CognitionTable;
+
+
 %% SkatingTable subjectMean
 
-TargetTable = struct([]);
+SkatingTable_subjectMean = struct([]);
 iRow = 1;
 subjects = unique(MotorTable_subjectMean.Subject, 'stable');
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
     subjectMotorTable = MotorTable_subjectMean(MotorTable_subjectMean.Subject == string(subject), :);
-    subjectCognitionTable = CognitionTable(CognitionTable.Subject == string(subject), :);
+    subjectCognitionTable = CognitionTableClean(CognitionTableClean.Subject == string(subject), :);
     subjectSubjectTable = SubjectTable(SubjectTable.Subject == string(subject), :);
     for iStage = 1:length(stages)
         stage = stages(iStage);
@@ -260,7 +264,7 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
         end
 
@@ -269,7 +273,7 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
         end
 
@@ -278,7 +282,7 @@ for iSubject = 1:length(subjects)
         newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            TargetTable(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
             % update list of dependent variables
             depVars = union(depVars, {variable}, 'stable');
@@ -290,7 +294,7 @@ for iSubject = 1:length(subjects)
 end
 
 % convert structure array to table
-SkatingTable_subjectMean = struct2table(TargetTable);
+SkatingTable_subjectMean = struct2table(SkatingTable_subjectMean);
 
 % append table to Measurements structure
 Measurements.SkatingTable_subjectMean = SkatingTable_subjectMean;
@@ -315,13 +319,13 @@ saveTable(Measurements.MotorTable, 'MotorTable', {'xlsx'}, outDir);
 fprintf('Saving Cognition table...\n');
 saveTable(Measurements.CognitionTable, 'CognitionTable', {'xlsx'}, outDir);
 
-% write Skating table subjectMean
-fprintf('Saving Skating table in long format...\n');
-saveTable(SkatingTable_subjectMean, 'SkatingTable_subjectMean', {'csv'}, outDir);
-
 % write Skating table 
 fprintf('Saving Skating table in wide format...\n');
 saveTable(SkatingTable, 'SkatingTable', {'csv'}, outDir);
+
+% write Skating table subjectMean
+fprintf('Saving Skating table in long format...\n');
+saveTable(SkatingTable_subjectMean, 'SkatingTable_subjectMean', {'csv'}, outDir);
 
 fprintf('If necessary, save current state using ''saveState''\n');
 
