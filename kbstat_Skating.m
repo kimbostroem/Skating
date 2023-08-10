@@ -51,7 +51,7 @@ options.errorBars = 'se';
 % options.constraint = 'Medication == 0';
 % options.constraint = 'ADHS == 1 & Stage == 2';
 
-%% Analysis
+%% Analysis of Motor data
 
 depVars = {'Jerk', 'TargetError', 'PathLength'};
 depVarUnitss = {'m/s^3', 'm', 'm'};
@@ -59,12 +59,87 @@ tasks = {'Balance', 'Sprung', 'Einbein'};
 distributions = {'gamma', 'gamma', 'gamma'};
 links = {'', '', ''};
 meanFlags = [1, 0];
-kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
 
-% depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
-% tasks = '';
-% depVarUnitss = {'', '', '', ''};
-% distributions = {'gamma', 'gamma', 'normal', 'normal'};
-% links = {'', '', '', ''};
-% meanFlags = 0;
-% kbstatWithOptions(depVars, meanFlags, tasks, distributions, links, depVarUnitss, resultsDir, options);
+optionsOrig = options;
+if isfield(options, 'constraint')
+    constraintOrig = options.constraint;
+else
+    constraintOrig = '';
+end
+for iVar = 1:length(depVars)
+    depVar = depVars{iVar};
+    depVarUnits = depVarUnitss{iVar};
+    distribution = distributions{iVar};
+    link = links{iVar};
+    for iTask = 1:length(tasks)
+        task = tasks{iTask};
+        for iFlag = 1:length(meanFlags)
+            meanFlag = meanFlags(iFlag);
+            if meanFlag
+                options.inFile = '../Skating_Out/All/SkatingTable_subjectMean.csv';
+                if ~isempty(task)
+                    options.y = sprintf('%s_%s', task, depVar);
+                    options.outDir = sprintf('%s/SubjectMean/%s_%s', resultsDir, task, depVar);
+                else
+                    options.y = depVar;
+                    options.outDir = sprintf('%s/SubjectMean/%s', resultsDir, depVar);
+                end
+                
+            else
+                options.inFile = '../Skating_Out/All/SkatingTable.csv';
+                if ~isempty(task)
+                    options.y = depVar;
+                    if ~isempty(constraintOrig)
+                        options.constraint = sprintf('%s & MotorTask == %s', constraintOrig, task);
+                    else
+                        options.constraint = sprintf('MotorTask == %s', task);
+                    end
+                    options.title = sprintf('%s %s', task, depVar);
+                    options.outDir = sprintf('%s/NoSubjectMean/%s_%s', resultsDir, task, depVar);
+                else
+                    options.y = depVar;
+                    options.outDir = sprintf('%s/NoSubjectMean/%s', resultsDir, depVar);
+                end
+                
+            end
+            options.yUnits = depVarUnits;
+            options.distribution = distribution;
+            options.link = link;
+            kbstat(options);
+            options = optionsOrig;
+        end
+    end
+end
+
+%% Analysis of Cognition data
+
+depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
+depVarUnitss = {'', '', '', ''};
+distributions = {'gamma', 'gamma', 'normal', 'normal'};
+links = {'', '', '', ''};
+
+optionsOrig = options;
+if isfield(options, 'constraint')
+    constraintOrig = options.constraint;
+else
+    constraintOrig = '';
+end
+for iVar = 1:length(depVars)
+    depVar = depVars{iVar};
+    depVarUnits = depVarUnitss{iVar};
+    distribution = distributions{iVar};
+    link = links{iVar};
+    for iTask = 1:length(tasks)
+        task = tasks{iTask};
+        for iFlag = 1:length(meanFlags)
+            options.inFile = '../Skating_Out/All/CognitionTable.csv';
+            options.y = depVar;
+            options.outDir = sprintf('%s/Cognition/%s', resultsDir, depVar);
+            options.yUnits = depVarUnits;
+            options.distribution = distribution;
+            options.link = link;
+            kbstat(options);
+            options = optionsOrig;
+        end
+    end
+end
