@@ -68,6 +68,13 @@ tic
 save(fullfile(outDir, allDir, 'AllTables.mat'), 'AllTables');
 fprintf('DONE in %.3f seconds\n', toc);
 
+% save Measurements.mat
+fprintf('Saving Measurements structure in MAT file...\n');
+tic
+saveState
+fprintf('DONE in %.3f seconds\n', toc);
+
+
 
 
 
