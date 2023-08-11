@@ -44,9 +44,9 @@ options.id = 'Subject';
 % options.x = 'Intervention, ADHS';
 % options.within = 'Intervention';
 % options.interact = 'Intervention, ADHS';
-options.x = 'Stage, Intervention';
-options.within = 'Stage, Intervention';
-options.interact = 'Stage, Intervention';
+options.x = 'Stage, Skating';
+options.within = 'Stage';
+options.interact = 'Stage, Skating';
 options.posthocMethod = 'ttest';
 options.removeOutliers = 'true';
 options.isRescale = true;
@@ -120,35 +120,35 @@ for iVar = 1:length(depVars)
     end
 end
 
-% %% Analysis of Cognition data
-% 
-% depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
-% depVarUnitss = {'', '', '', ''};
-% distributions = {'gamma', 'gamma', 'normal', 'normal'};
-% links = {'', '', '', ''};
-% 
-% optionsOrig = options;
-% if isfield(options, 'constraint')
-%     constraintOrig = options.constraint;
-% else
-%     constraintOrig = '';
-% end
-% for iVar = 1:length(depVars)
-%     depVar = depVars{iVar};
-%     depVarUnits = depVarUnitss{iVar};
-%     distribution = distributions{iVar};
-%     link = links{iVar};
-%     for iTask = 1:length(tasks)
-%         task = tasks{iTask};
-%         for iFlag = 1:length(meanFlags)
-%             options.inFile = '../Skating_Out/All/CognitionTable.csv';
-%             options.y = depVar;
-%             options.outDir = sprintf('%s/Cognition/%s', resultsDir, depVar);
-%             options.yUnits = depVarUnits;
-%             options.distribution = distribution;
-%             options.link = link;
-%             kbstat(options);
-%             options = optionsOrig;
-%         end
-%     end
-% end
+%% Analysis of Cognition data
+
+depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
+depVarUnitss = {'', '', '', ''};
+distributions = {'gamma', 'gamma', 'normal', 'normal'};
+links = {'', '', '', ''};
+
+optionsOrig = options;
+if isfield(options, 'constraint')
+    constraintOrig = options.constraint;
+else
+    constraintOrig = '';
+end
+for iVar = 1:length(depVars)
+    depVar = depVars{iVar};
+    depVarUnits = depVarUnitss{iVar};
+    distribution = distributions{iVar};
+    link = links{iVar};
+    for iTask = 1:length(tasks)
+        task = tasks{iTask};
+        for iFlag = 1:length(meanFlags)
+            options.inFile = '../Skating_Out/All/CognitionTable.csv';
+            options.y = depVar;
+            options.outDir = sprintf('%s/Cognition/%s', resultsDir, depVar);
+            options.yUnits = depVarUnits;
+            options.distribution = distribution;
+            options.link = link;
+            kbstat(options);
+            options = optionsOrig;
+        end
+    end
+end
