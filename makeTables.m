@@ -170,6 +170,8 @@ end
 subjectVariables_orig = Measurements.Subjects.Properties.VariableNames;
 subjectVariables_clean = [
     "Subject"
+    "Group"
+    "Skating"
     "ADHS"
     "Diagnose"
     "Sex"

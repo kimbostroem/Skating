@@ -4,7 +4,7 @@ diary(fullfile(outDir,'log.txt'));
 
 makeSubjects;
 % makeMotorData;
-makeMotorMetrics;
+% makeMotorMetrics;
 makeCognitionData;
 makeTables;
 saveState;
