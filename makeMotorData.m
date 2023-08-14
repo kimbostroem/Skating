@@ -15,7 +15,7 @@ motorDirs = {dirInfo.name}';
 idxExclude = startsWith(motorDirs', {'.', '~'}) | ~[dirInfo.isdir];
 motorDirs(idxExclude) = [];
 
-motorDirs = {'ProKo'};
+motorDirs = {'PR'};
 
 for iDir = 1:length(motorDirs)
 

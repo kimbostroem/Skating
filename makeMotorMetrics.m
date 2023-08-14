@@ -240,7 +240,7 @@ if outlierThresholdFactor > 0
     for iVar = 1:length(variables)
         variable = variables{iVar};
         for iTask = 1:length(tasks)
-            rows = (Measurements.MotorMetrics.Task == task);
+            rows = (MotorMetrics.Task == task);
             Data = MotorMetrics.(variable)(rows);
             idx = isoutlier(Data, 'ThresholdFactor', outlierThresholdFactor);
             Data(idx) = NaN;

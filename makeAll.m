@@ -3,8 +3,8 @@ init;
 diary(fullfile(outDir,'log.txt'));
 
 makeSubjects;
-% makeMotorData;
-% makeMotorMetrics;
+makeMotorData;
+makeMotorMetrics;
 makeCognitionData;
 makeTables;
 saveState;
