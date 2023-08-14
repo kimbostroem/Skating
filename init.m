@@ -8,16 +8,21 @@ clear
 close all
 
 % which dataset to use (subfolder of outDir)
-dataSet = 'All';
+dataSet = 'ProKo';
 
 fprintf('Using dataset ''%s''...\n', dataSet);
 
 % set folders
 outDir = sprintf('../Skating_Out/%s', dataSet);
 inDir = '../Skating_In';
-motorDir = fullfile(inDir, 'Motorisch');
+motorDir = fullfile(inDir, 'Motorisch', dataSet);
 cogDir = fullfile(inDir, 'Kognitiv');
 paramDir = fullfile(inDir, 'Parameter');
+
+% create output folder if necessary
+if ~isfolder(outDir)
+    mkdir(outDir);
+end
 
 % restore default path
 restoredefaultpath;

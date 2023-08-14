@@ -10,16 +10,16 @@ Measurements = loadState();
 % load table containing subjects info
 SubjectsTable = Measurements.Subjects;
 
-dirInfo = dir(motorDir);
-motorDirs = {dirInfo.name}';
-idxExclude = startsWith(motorDirs', {'.', '~'}) | ~[dirInfo.isdir];
-motorDirs(idxExclude) = [];
-
-motorDirs = {'PR'};
+% dirInfo = dir(motorDir);
+% motorDirs = {dirInfo.name}';
+% idxExclude = startsWith(motorDirs', {'.', '~'}) | ~[dirInfo.isdir];
+% motorDirs(idxExclude) = [];
+% motorDirs = {'PR'};
+motorDirs = cellstr(motorDir);
 
 for iDir = 1:length(motorDirs)
 
-    myMotorDir = fullfile(motorDir, motorDirs{iDir});
+    myMotorDir = motorDirs{iDir};
     % list content of input folder into cell array
     dirInfo = dir(fullfile(myMotorDir, '*.mat'));
     fdirs = {dirInfo.folder}';
