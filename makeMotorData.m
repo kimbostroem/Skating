@@ -117,14 +117,16 @@ for iDir = 1:length(motorDirs)
         % ignore data if Force in Z -direction is smaller than -LoadThresh Newton
         for iPlate = 1:nPlates
             idxPlateGaps = squeeze(abs(Forces(iPlate, 3, :)) < LoadThresh)';
-            Forces(iPlate, :, idxPlateGaps) = 0;
+            if all(idxPlateGaps)
+                Forces(iPlate, :, :) = 0;
+            end
             COPs(iPlate, :, idxPlateGaps) = NaN;
         end
-        Force = squeeze(sum(Forces, 1, 'omitnan'));
+        Force = squeeze(sum(Forces, 1, 'omitnan'));        
         absForces = abs(Forces(:, 3, :)); % z-component of force
         weightedCOPs = (absForces .* COPs) ./ sum(absForces, 1);
         COPxyz = squeeze(sum(weightedCOPs, 1, 'omitnan'));
-        COP = COPxyz(1:2, :);
+        COP = COPxyz(1:2, :);       
 
         iStart = find(abs(Force(3,:))>InitForce, 1, 'first');
         iStart = iStart + floor(InitMarg/dt);
