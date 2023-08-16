@@ -20,23 +20,6 @@ else
     fprintf('Creating new Measurements structure...\n');
     % init Measurements structure
     Measurements = struct;
-    % % delete content of output folder
-    % fprintf('Deleting content of output folder...\n');
-    % dirInfo = dir(outDir);
-    % fdirs = {dirInfo.folder}';
-    % fnames = {dirInfo.name}';
-    % idxNoDelete = matches(fnames, {'.', '..'});
-    % fdirs(idxNoDelete) = [];
-    % fnames(idxNoDelete) = [];
-    % fpaths = strcat(fdirs, filesep, fnames);
-    % for iPath = 1:length(fpaths)
-    %     fpath = fpaths{iPath};
-    %     if isfile(fpath)
-    %         delete(fpath);
-    %     else
-    %         rmdir(fpath, 's');
-    %     end
-    % end
 end
 
 end
