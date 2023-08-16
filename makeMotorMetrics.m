@@ -107,19 +107,19 @@ for iFile = 1:nFiles
 
     % get variables
     subjectWeight = MotorMetrics(item).Weight;
-    Time = Measurements.MotorData(iFile).Time;
+    TimeForce = Measurements.MotorData(iFile).TimeForce;
     Force = Measurements.MotorData(iFile).Force;
     COP = Measurements.MotorData(iFile).COP;
     idxContact = Measurements.MotorData(iFile).idxContact;
-    sampleRate = Measurements.MotorData(iFile).sampleRate;
+    sampleRateForce = Measurements.MotorData(iFile).sampleRateForce;
     stopPos = Measurements.MotorData(iFile).stopPos;
 
-    if isempty(sampleRate)
+    if isempty(sampleRateForce)
         fprintf('\t\tEmpty dataset - skipping\n');
         continue
     end
 
-    dt = 1/sampleRate; % time step size [s]
+    dt = 1/sampleRateForce; % time step size [s]
     % task = MotorMetrics(item).Task;
 
     switch task
@@ -225,7 +225,7 @@ for iFile = 1:nFiles
     end
 
     % path length
-    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
+    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(TimeForce));
 
     targetErrorName = 'TargetError';
 

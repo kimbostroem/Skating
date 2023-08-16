@@ -94,26 +94,26 @@ for iDir = 1:length(motorDirs)
         MotorData = tmp.(fields{1});
         lengthScale = 0.001; % mm -> m
         try
-            [Forces, sampleRate, COPs, ~, location, Analog] = kraftAusQualisys(MotorData, lengthScale);
+            [Forces, sampleRateForce, COPs, ~, location, Analog] = kraftAusQualisys(MotorData, lengthScale);
         catch ME
             fprintf('\t%s:\tError when extracting forces -> skipping\n', fname);
             fprintf('\t\t%s\n', ME.message);
             continue
         end
         PowerLineHum = 50;
-        nSamples = length(Forces);
-        if nSamples < 2^nextpow2(PowerLineHum)/2
-            fprintf('\t%s:\tNot enough data (%d samples) -> skipping\n', fname, nSamples);
+        nSamplesForce = length(Forces);
+        if nSamplesForce < 2^nextpow2(PowerLineHum)/2
+            fprintf('\t%s:\tNot enough data (%d samples) -> skipping\n', fname, nSamplesForce);
             continue
         end
         Forces = -Forces; % ground reaction forces are inverse of plate forces
         nPlates = size(Forces, 1);
-        dt = 1/sampleRate; % time step size [s]
-        HumPeriod = sampleRate/HumFreq;
+        dtForce = 1/sampleRateForce; % time step size [s]
+        HumPeriod = sampleRateForce/HumFreq;
         for iPlate = 1:nPlates
             Forces(iPlate, :, :) = periodicMedianFilter(squeeze(Forces(iPlate, :, :)), HumPeriod);
         end
-        [COPs, ~, Forces, ~] = getCOPfromAnalog(Analog, Forces, [], location, sampleRate, [], [], [], COPs);
+        [COPs, ~, Forces, ~] = getCOPfromAnalog(Analog, Forces, [], location, sampleRateForce, [], [], [], COPs);
         % ignore data if Force in Z -direction is smaller than -LoadThresh Newton
         for iPlate = 1:nPlates
             idxPlateGaps = squeeze(abs(Forces(iPlate, 3, :)) < LoadThresh)';
@@ -129,18 +129,25 @@ for iDir = 1:length(motorDirs)
         COP = COPxyz(1:2, :);       
 
         iStart = find(abs(Force(3,:))>InitForce, 1, 'first');
-        iStart = iStart + floor(InitMarg/dt);
+        iStart = iStart + floor(InitMarg/dtForce);
         Force = Force(:, iStart:end);
         iStop = find(abs(Force(3,:))>InitForce, 1, 'last');
-        iStop = iStop - floor(InitMarg/dt);
+        iStop = iStop - floor(InitMarg/dtForce);
         Force = Force(:, 1:iStop);
-        COP = COP(:, iStart:iStop+iStart-1);
-        nSamples = size(Force, 2);
-        if nSamples == 0
+        idxForce =  iStart:iStop+iStart-1;
+        COP = COP(:, idxForce);
+        nSamplesForce = size(Force, 2);
+        if nSamplesForce == 0
             fprintf('\t%s:\tToo few samples with nonzero force -> skipping\n', fname);
             continue
         end
-        Time = (0:nSamples-1)/sampleRate;
+        TimeForce = (0:nSamplesForce-1)/sampleRateForce;
+        sampleRateKin = MotorData.FrameRate;        
+        iStartKin = ceil(iStart/sampleRateForce*sampleRateKin);
+        iStopKin = ceil(iStop/sampleRateForce*sampleRateKin);
+        idxKin =  iStartKin:iStopKin+iStartKin-1;   
+        nSamplesKin = length(idxKin);
+        TimeKin = (0:nSamplesKin-1)/sampleRateKin;
 
         %% Remove non-contact phases from COP
 
@@ -149,13 +156,13 @@ for iDir = 1:length(motorDirs)
 
         %% Add gap margins
 
-        gapMarginSmp = round(gapMargin * sampleRate); % gap margin in samples
+        gapMarginSmp = round(gapMargin * sampleRateForce); % gap margin in samples
         % find the beginnings of each gap
         gapStart = [-1, find(idxGaps)];
         dGapStart = [1, diff(gapStart)];
         gapStart(dGapStart == 1) = [];
         % find the endings of the gaps
-        gapStop = [find(idxGaps), nSamples+2];
+        gapStop = [find(idxGaps), nSamplesForce+2];
         dGapStop = [diff(gapStop), 1];
         gapStop(dGapStop == 1) = [];
         % enlarge the gaps by margin
@@ -163,7 +170,7 @@ for iDir = 1:length(motorDirs)
         gapStop = gapStop + gapMarginSmp;
         % keep within data range
         gapStart(gapStart < 1)  = 1;
-        gapStop(gapStop > nSamples) = nSamples;
+        gapStop(gapStop > nSamplesForce) = nSamplesForce;
         % re-create bool array for non-gap indices
         for iSample = 1:length(gapStart)
             idxGaps(gapStart(iSample):gapStop(iSample)) = true;
@@ -182,38 +189,54 @@ for iDir = 1:length(motorDirs)
             labels = MotorData.Trajectories.Labeled.Labels;
             % get start and stop marker labels
             switch side
+                case 'L'
+                    startLabel = Einbein_start;
+                    stopLabel = Einbein_stop;
+                    footLabels = {'LFM1'};
+                case 'R'
+                    startLabel = Einbein_start;
+                    stopLabel = Einbein_stop;
+                    footLabels = {'RFM1'};
                 case 'B'
                     startLabel = Beidbein_start;
                     stopLabel = Beidbein_stop;
-                case {'L', 'R'}
-                    startLabel = Einbein_start;
-                    stopLabel = Einbein_stop;
+                    footLabels = {'LFM1', 'RFM1'};
                 otherwise
             end
             % get start and stop marker data
             idx = strcmp(labels, startLabel);
             if any(idx)
-                pos_raw = squeeze(MotorData.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
+                pos_raw = squeeze(MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin))/1000;
                 startPos = mean(pos_raw, 2);
             end
             idx = strcmp(labels, stopLabel);
             if any(idx)
-                pos_raw = squeeze(MotorData.Trajectories.Labeled.Data(idx, 1:3, :))/1000;
+                pos_raw = squeeze(MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin))/1000;
                 stopPos = mean(pos_raw, 2);
+            end
+            % get foot marker data
+            idx = ismember(labels, footLabels);
+            footPos = nan(1, nSamplesForce);
+            if any(idx)
+                footPos = squeeze(mean(MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin), 1, 'omitnan'))/1000;
             end
         end
 
         %% Store data
 
         Measurements.MotorData(fileNr).fileName = fname;
-        Measurements.MotorData(fileNr).nSamples = nSamples;
-        Measurements.MotorData(fileNr).sampleRate = sampleRate;
-        Measurements.MotorData(fileNr).Time = Time;
+        Measurements.MotorData(fileNr).nSamplesForce = nSamplesForce;
+        Measurements.MotorData(fileNr).sampleRateForce = sampleRateForce;
+        Measurements.MotorData(fileNr).TimeForce = TimeForce;
         Measurements.MotorData(fileNr).Force = Force;
         Measurements.MotorData(fileNr).COP = COP;
         Measurements.MotorData(fileNr).idxContact = ~idxGaps;
         Measurements.MotorData(fileNr).startPos = startPos;
         Measurements.MotorData(fileNr).stopPos = stopPos;
+        Measurements.MotorData(fileNr).nSamplesKin = nSamplesKin;
+        Measurements.MotorData(fileNr).sampleRateKin = sampleRateKin;
+        Measurements.MotorData(fileNr).TimeKin = TimeKin;
+        Measurements.MotorData(fileNr).footPos = footPos;
 
         % report progress
         fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', fname, iFile, nFiles, iFile/nFiles*100, toc);
