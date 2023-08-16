@@ -23,6 +23,8 @@ function UserBody = extractBodyFromQUALSkel(SkelData)
 % Version 230418 (MdL) removed the calculations for nexPos for hip and lumbar joints, for this
 % destroyes the muscle positions; correct scaling for the RBM and Pelvis segments (according to 
 % marker import (extractBodyFromSegments); correct scale factor
+% Version 230609 (MdL) improved comments, better variable names for spine
+% version 230613 (MdL) do not calculate ribcage length: we use the default from def_body (see also convertCS)
 
 %% init
 UserBody = struct;
@@ -92,29 +94,9 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
             SegmentSizes(RBMNo) = PelvisWidth / BodyHeight;
 
         case 12 % lumbar joint -> thorax
-            % The lumbar joint corresponds 3 subsequent joints in the Skeleton, named Spine, Spine1 and Spine2. The distance
-            % between the 1st and 2nd spine joints corresponds to the translation of the lumbar joint. The distance between the 2nd
-            % and 3rd spine joint plus the distance between the 3rd spine joint and the neck joint corresponds to the length of the
-            % thorax segment.
-            SkelThis2No  = strcmp(thisNames{2}, SkelJntNames);
-            SkelThis3No  = strcmp(thisNames{3}, SkelJntNames);
-            SkelThisEndNo = strcmp(thisNames{end}, SkelJntNames);
-            cervicalNames = strsplit(ConversionTable.srcName{ConversionTable.id == 1},';'); % Neck and Head
-            SkelCervId    = strcmp(cervicalNames{1}, SkelJntNames);
-            IsFlankerSegmentsDefined = any(SkelThis2No) && any(SkelThis3No) && any(SkelThisEndNo) && any(SkelCervId);
-            if IsFlankerSegmentsDefined
-                % the length in [m]
-                Length = vecnorm(...
-                    SkelData.signals.joints(SkelThis2No).dynamic.pos.data(1,:)...
-                    - SkelData.signals.joints(SkelThis3No).dynamic.pos.data(1,:)) + ...
-                    vecnorm( SkelData.signals.joints(SkelThisEndNo).dynamic.pos.data(1,:)...
-                    - SkelData.signals.joints(SkelCervId).dynamic.pos.data(1,:));
-                SegmentSizes(SegmentNo) = Length;
-                % ignore the nextpos translations from defBody
-                nextPosZ = abs(DefBody.segments.nextPos(SegmentNo,1,3));
-                % normalize the segment length to the body height
-                SegmentSizes(SegmentNo) = SegmentSizes(SegmentNo) / (BodyHeight * nextPosZ);
-            end
+            % The Qualisys sports skeleton has three back segments, Spine, Spine1 and Spine2.
+            % The joint between Spine1 and Spine2 is stiff (see Sports-Marker-Set.pdf).
+            % The translation of the lumbar joint is dealt with in convertCS.
 
         case {2,3} % right/left clavicle
             % The length of the clavicle is determined by the distance between the clavicle joint and the shoulder joint
@@ -142,17 +124,18 @@ for JointNo = 1:length(DefBody.joints.id) % No : the row number of the id
         otherwise % all other joints
             if ~any(ConversionNo) || any(cellfun(@isempty,thisNames))
                 % { 4, 5} scapula
+                % C1-8, skull, L1-S1, pelvis
                 continue
             end
             followerJoint = DefBody.joints.id(DefBody.joints.baseSegment==SegmentId);
             if isempty(followerJoint)
                 % {1} neck (head)
+                % {10,11} wrist (hand)
                 % {19,20) mt (toes)
                 continue
             end
             % { 6, 7} shoulder (humerus)
             % { 8, 9} elbow (radius)
-            % {10,11} wrist (hand)
             % {13,14} hip (femur)
             % {15,16} knee (tibia)
             % {17,18} ankle (foot)
@@ -189,19 +172,17 @@ UserBody.segments.name = DefBody.segments.name;
 UserBody.segments.size = SegmentSizes;
 UserBody.segments.scale = ScaleToDefault;
 
-% % print the lengths and nextPos:
-% fprintf('%5s %25s %5s %5s  np: %6s %6s %6s xx %6s %6s %6s xx %6s %6s %6s\n', ...
-%     'id','name','len','scale','np1-x','np1-y','np1-z','np2-x','np2-y','np2-z','np3-x','np3-y','np3-z')
+% % print the lengths:
+% fprintf('\n==================================================================================\n');
+% fprintf('%5s %25s %8s %7s\n', 'id','changed sizes','len','scale')
 % for Id = 1:length(UserBody.segments.id)
-%     No = find(UserBody.segments.id == Id);
-%     if ~isempty(No)
-%         fprintf('%5d %25s %5.2f %5.2f  np: %6.2f %6.2f %6.2f xx %6.2f %6.2f %6.2f xx %6.2f %6.2f %6.2f\n', ...
-%             Id, UserBody.segments.name{No}, ...
-%             UserBody.segments.size(No)*BodyHeight, UserBody.segments.scale(No), ...
-%             );
+%     Idx = UserBody.segments.id == Id;
+%     if any(Idx) && ~isnan(UserBody.segments.size(Idx))
+%         fprintf('%5d %25s %5.1f cm %5.0f %%\n', Id, UserBody.segments.name{Idx}, ...
+%             100*UserBody.segments.size(Idx)*BodyHeight, 100*UserBody.segments.scale(Idx) );
 %     end
 % end
-
+% fprintf('====================================================================================\n\n');
 end
 
 % ==================================================================================================

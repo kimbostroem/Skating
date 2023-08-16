@@ -1,4 +1,4 @@
-function [SkelData,IsSkeleton,SimInMN,GlobalMN] = importQUALSkel(Data,UserPref,SimInMN,Info,UserBody)
+function [SkelData,IsSkeleton,SimInMN,GlobalMN] = importQUALSkel(Data,UserPref,SimInMN,Info,PreBody)
 %% Qualisys MAT file with Skeleton (source) to Myonardo stream (target)
 % Import the sports skeleton from the QTM-exported kinematic file and write
 % the angles to stream.
@@ -12,7 +12,7 @@ function [SkelData,IsSkeleton,SimInMN,GlobalMN] = importQUALSkel(Data,UserPref,S
 %     UserPref (struct) structure containing user preferences
 %     SimInMN  (MNData struct) structure containing body parameters
 %     Info 	   (struct) structure containing further information (e.g. the time)
-%     UserBody (struct) User-specific parameters replacing general and segments tables of def_body
+%     PreBody  (struct) User-specific parameters updated to tables of def_body (see prepareSimParam)
 %
 % OUTPUT
 %     SkelData (MNData struct) structure containing skeleton data
@@ -26,6 +26,7 @@ function [SkelData,IsSkeleton,SimInMN,GlobalMN] = importQUALSkel(Data,UserPref,S
 % Website: http://www.predimo.com
 % Author:  Kim Bostroem and Marc de Lussanet, Movement Science, WWU Muenster
 % version 230216 (MdL) FIXED set IsSkeleton flag also if it is a body file
+% version 230606 (MdL) handle marker global positions
 
 %% init
 QTMTime = Info.QTMTime;
@@ -82,8 +83,8 @@ end
 Time = ((1:Data.Frames)-1)/Data.FrameRate;
 
 % convert the spatial orientations of the segments into joint angles, according to the Myonardo
-% definition
-[Jointstream,GlobalStream] = convertCS(SkelData,Time,ConversionTable,UserPref.isGlobalPos,UserBody);
+% definition (preBody: see prepareSimParam)
+[Jointstream,GlobalStream] = convertCS(SkelData,Time,ConversionTable,UserPref.isGlobalPos,PreBody);
 
 % write to stream and resample
 if ~isempty(Jointstream)
@@ -122,14 +123,21 @@ if ~isempty(Jointstream)
 
         % The global positions of GRF-related joints
         JointPos = GlobalStream.signals.joints(jj).dynamic.pos.data;
+        JointDistal = GlobalStream.signals.joints(jj).dynamic.distal.data;
         JointGlobalR = GlobalStream.signals.joints(jj).dynamic.globalR.data;
         % Resample to the internal sample rate (internalSR)
         TmpPos = interp1(QTMTime,JointPos,InternalSR);
+        TmpDistal = interp1(QTMTime,JointDistal,InternalSR);
         JointGlobalR = reshape(JointGlobalR,[length(QTMTime), 9]); % bring to NSamples x dim shape for interp1
         TmpGlobalR = interp1(QTMTime,JointGlobalR,InternalSR);
         TmpGlobalR = reshape(TmpGlobalR,[length(InternalSR), 3,3]); % reshape to rotation matrix
         GlobalMN.signals.joints(jj).dynamic.pos.data = TmpPos;
+        GlobalMN.signals.joints(jj).dynamic.distal.data = TmpDistal;
         GlobalMN.signals.joints(jj).dynamic.globalR.data = TmpGlobalR;
+
+        % save the segment length, in order to get the endpoint (preBody: see prepareSimParam)
+        iSeg = PreBody.joints.followerSegment(jj);
+        GlobalMN.signals.joints(jj).static.length.data = PreBody.segments.size(iSeg) * PreBody.general.height;
     end
 
     % flags and messages

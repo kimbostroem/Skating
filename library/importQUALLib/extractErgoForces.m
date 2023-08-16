@@ -104,8 +104,8 @@ for ItemNo = 1:length(ErgoNames)
 
     % initiate
     CumItemNo = CumItemNo + 1;
-    Id = SubjectBody.forces.id(matches(SubjectBody.forces.name,forceItem));
-    Stream.forces(CumItemNo).id = Id;
+    ID = SubjectBody.forces.id(matches(SubjectBody.forces.name,forceItem));
+    Stream.forces(CumItemNo).id = ID;
     Stream.forces(CumItemNo).name = forceItem;
     Stream.forces(CumItemNo).dynamic.force.units = 'N';
     Stream.forces(CumItemNo).dynamic.force.data  = squeeze(ErgoForce(ItemNo,1:3,:))';

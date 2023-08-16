@@ -1,46 +1,43 @@
 function [COPcorr,COP,Forces,IsLoadedAll,Type,Msgs,Flag] = getCOPfromAnalog(AnalogAll,Forces,FPNumbers,Locations,Freq, ...
-    FiltFreq,PowerLineFreq,Fill,COPraw)
+    FiltFreq,PowerLineFreq,Fill,COPraw,Type,DoCrop)
 %% Smooth and correct the COP, depending on the type of force plate, using the original analog data if present
 % corrected and filtered COP for Kistler 9287CA force plates
 % since we are dealing with bit-noise, the noise depends on amplification.
 % therefore it is best to apply the load threshold on the analog z-channels
 % 
 % SYNTAX
-% COPcorr = getCOPfromAnalog(AnalogAll,Forces,FPno,Locations,Freq);
-% [COPcorr,COPraw,Forces,IsLoadedAll,Type] = ...
-%         getCOPfromAnalog(AnalogAll,Forces,FPno,Locations,Freq,FiltFreq,PowerLineFreq,0,COPQTM);
-% [~,COPraw] = ...
-%         getCOPfromAnalog(AnalogAll,Forces,FPno,Locations,Freq,FiltFreq,[],NaN,COPQTM);
+% [COPcorr,COP,Forces,IsLoadedAll,Type,Msgs,Flag] = getCOPfromAnalog(AnalogAll,Forces,FPNumbers,Locations,Freq,FiltFreq,PowerLineFreq,Fill,COPraw,Type,DoCrop)
 % 
 % INPUT
-%   AnalogAll   (FPno,8,NS) timeseries of the eight analog channels
-%   Forces      (FPno,XYZ,NS) timeseries of the 3D forces
-%   FPno        list of Force plate numbers to be analysed (default: all eight plates)
-%   Locations   (FPno,4,XYZ) locations of the corners of the force plates [m, meter]
-%   Freq        measurement frequency [Hz]
-% Optional ones:
-%   FiltFreq    [default 20 Hz; 0=off] low-pass filter depending on Filter:
-%     -Filter   [default 'SavGolay' alternative 'Butter' back-forth]
-%     -FiltSpan for 'SavGolay' computed from FiltFreq
-%     -SGOrder  for 'SavGolay' default 4th order.
-%   PowerFreq   [default 50 Hz; 0=off] powerline hum removal
-%   Fill        [default NaN] COP value for non-loaded phases (0=force plate center)
-%   COPraw      If Analog is not Kistler-type, the COP is not re-calculated, only smoothed.
+%   AnalogAll   (double Plates x 8-Chan x NSamples) timeseries of the eight analog channels
+%   Forces      (double Plates x 3d x NSamples) timeseries of the 3D forces
+%   FPno        (double Plates) list of Force plate numbers to be analysed (default: all eight plates)
+%   Locations   (double Plates x 4-corners x 3d) locations of the corners of the force plates [m, meter]
+%   Freq        (double) measurement frequency [Hz]
+% Optional:
+%   FiltFreq    (double) [default 20 Hz; 0=off] low-pass filter depending on Filter:
+%   PowerFreq   (double) [default 50 Hz; 0=off] powerline hum removal
+%   Fill        (double) [default NaN] COP value for non-loaded phases (0=force plate center)
+%   COPraw      (double) If Analog is not Kistler-type, the COP is not re-calculated, only smoothed.
+%   Type        (cell char) for Kistler FP, the COP is calculated directly from analog signals
+%   DoCrop      (logical) default true: crop the forces when outside the force plate edges
 %            
 % OUTPUT
-%     COPcorr     (MaxPl,3d,NSamples double) COP corrected for non-linearity of force plates 
-%     COP         (MaxPl,3d,NSamples double) COP not corrected for non-linearity of force plates
-%     Forces      (MaxPl,3d,NSamples double) forces with removed Powerline hum and gap-filled
-%     IsLoadedAll (MaxPl,NSamples logical) which of te plates is loaded when
+%     COPcorr     (Plates x 3d x NSamples double) COP corrected for non-linearity of force plates 
+%     COP         (Plates x 3d x NSamples double) COP not corrected for non-linearity of force plates
+%     Forces      (Plates x 3d x NSamples double) forces with removed Powerline hum and gap-filled
+%     IsLoadedAll (Plates x NSamples logical) which of te plates is loaded when
 %     Type        (char) type of force plate 
 %     Flag        (double) Exit status of the function (1 = success, 0 = warning, -1 = error)
 %     Msgs        (char) notifications, warning and error messages
 %
-% EXAMPLE
+% EXAMPLES
 % - Use with defaults:
 % COP = getCOPfromAnalog(AnalogAll,Forces,[],Locations,Freq);
+% 
 % - Using only a selection of Force Plates, and no filtering:
 % COP = getCOPfromAnalog(AnalogAll,Forces,[1 5],Locations,Freq,0,0);
+% 
 % - In case AMTI plates are also used:
 % COP = getCOPfromAnalog(AnalogAll,Forces,[],Locations,Freq,[],[],[],COPQTMall);
 %
@@ -52,28 +49,31 @@ function [COPcorr,COP,Forces,IsLoadedAll,Type,Msgs,Flag] = getCOPfromAnalog(Anal
 % Marc de Lussanet
 % version 230204 (MdL) fixed condition for reconstruction of kistler COP
 % version 230320 (MdL) fixed erroneous restructuring if there is just one force plate
+% version 230516 (MdL) fixed wrong loading thresholds for Kistler
+% version 230803 (MdL) flag for cropping the forces to the force plate edges; DebugPlot; cleaning of header
 
 %% Defaults
-narginchk(5,9)
+narginchk(5,11)
 if nargin < 6    || isempty(FiltFreq),      FiltFreq     = 20;   end
 if nargin < 7    || isempty(PowerLineFreq), PowerLineFreq= 50;   end
 if nargin < 8    || isempty(Fill),          Fill         =  0;   end
 if nargin < 9    || isempty(COPraw),        COPraw       = [];   end
+if nargin < 10   || isempty(Type),          Type         = {''}; end
+if nargin < 11   || isempty(DoCrop),        DoCrop       = false; end
 Msgs = {};
 Flag = 1;
+IsPLOT = false;
 
 % The filter frequency for the COP must be not too low to deal with the transients in the Z
 % direction (e.g. jumps)
 FiltFreq_COP = max([FiltFreq 40]); 
 
 % constants for determination of loading
-MinimalLoadDuration        = 0.1 * Freq; % defailt 0.1 s : very short loaded periods are not plausible
-LoadThresholdKistlerAnalog = [1/1000 1/2000]; % ~20 N, ~10 N, in Kistler units at sensitivity level 4
-LoadThresholdForceZ        = [20 10];         % N
+MinimalLoadDuration = 0.1 * Freq; % defailt 0.1 s : very short loaded periods are not plausible
+LoadThresholds      = [20 10];    % N: rough and fine estimate for load detection
 
 %% Constants & definitions
 X=1; Y=2; Z=3;
-NChannels   = size(AnalogAll,2); % number of analog channels per plate
 NPlates     = size(Forces,1);    % Number of plates
 NSamples    = size(Forces,3);
 COP         = Fill * ones(NPlates,Z,NSamples); % COP computed from analog signals
@@ -87,38 +87,22 @@ else
     ForcePlates = FPNumbers;
 end
 
-% which Forceplate Type
-if isempty(AnalogAll)
-    Type = [];          IsKistler = false; LoadThresholds = LoadThresholdForceZ;
-elseif NChannels == 6 
-    Type = {'AMTI'};    IsKistler = false; LoadThresholds = LoadThresholdForceZ;
-elseif NChannels == 8 
-    Type = {'Kistler'}; IsKistler = true;  LoadThresholds = LoadThresholdKistlerAnalog;
-else                   
-    Type = {'Other'};   IsKistler = false; LoadThresholds = LoadThresholdForceZ;
-end
-
-% AMTI force plates do not have power line hum
-if strcmp(Type,'AMTI')
-    PowerLineFreq = 0;  
-end
-
 %% loop through the force plates
-for FPNo = ForcePlates
+for iFP = ForcePlates
     % init
-    Force    = squeeze(Forces(   FPNo,:,:));
-    Location = squeeze(Locations(FPNo,:,:));
+    Force    = squeeze(Forces(   iFP,:,:));
+    Location = squeeze(Locations(iFP,:,:));
     
     %% remove power hum (filtering should be on analog rather than COP data!)
-    if PowerLineFreq
+    if PowerLineFreq && not(any(contains(Type,'AMTI'))) % AMTI force plates do not have power line hum
         Force = periodicMedianFilter(Force,   round(Freq/PowerLineFreq));
     end
     
     %% find non-loaded phases and set to nan
     % boolean array for each sample if the current plate is loaded
-    IsLoaded = computeLoadedPhases(Force(Z,:), LoadThresholds,MinimalLoadDuration,FPNo);
-    IsLoadedAll(FPNo,:) = IsLoaded;
-    
+    IsLoaded = computeLoadedPhases(Force(Z,:), LoadThresholds,MinimalLoadDuration,iFP);
+    IsLoadedAll(iFP,:) = IsLoaded;
+
     %% Compute the COP
     if any(IsLoaded) % (only if the plate was loaded at all)
         %% low pass filtering if desired
@@ -132,13 +116,13 @@ for FPNo = ForcePlates
         end
         
         %% Calculate a smooth COP
-        DoGetCOPFromAnalog = IsKistler && ~isempty(AnalogAll);
+        DoGetCOPFromAnalog = any(contains(Type,'Kistler')) && ~isempty(AnalogAll);
         if DoGetCOPFromAnalog
-            Analog   = squeeze(AnalogAll(FPNo,:,:));
-            [COPnoCorr,COPno] = kistlerCOPFromAnalog(Analog,ForceForCOP,IsLoaded,Location,FPNo,Freq,PowerLineFreq,FiltFreq_COP);
+            Analog   = squeeze(AnalogAll(iFP,:,:));
+            [COPnoCorr,COPno] = kistlerCOPFromAnalog(Analog,ForceForCOP,IsLoaded,Location,iFP,Freq,PowerLineFreq,FiltFreq_COP);
 
         elseif ~isempty(COPraw) % only if COPraw is provided 
-            COPno = squeeze(COPraw(FPNo,X:Y,:));
+            COPno = squeeze(COPraw(iFP,X:Y,:));
             COPno(:,~IsLoaded)=NaN;
             if FiltFreq == 0
                 % do not filter
@@ -149,36 +133,58 @@ for FPNo = ForcePlates
         else
             error('the COPraw must be provided if the focre is not provided from Qualisys-Kistler measurements')
         end
-        
-        % The COP must be inside the plate surface
-        Size = (max(Location,[],1)-min(Location,[],1))/2;
-        Out = abs(COPno(X,:))>Size(X) | abs(COPno(Y,:))>Size(Y);
+
         % Set non-loaded phases to Fill if wanted (Fill==0 : force plate center)
-        COPno(:,Out)        = Fill;
-        COPno(:,~IsLoaded)  = Fill; % if Fill=0, then set to center of force plate
+        COPno(    :,~IsLoaded) = Fill;
+        COPnoCorr(:,~IsLoaded) = Fill;
+
         % copy the results of the current plate
-        COP(FPNo,X:Y,:) = COPno;
-        COPcorr(FPNo,X:Y,:) = COPnoCorr;
-        Forces(FPNo,:,:) = Force;
+        COP(iFP,X:Y,:) = COPno;
+        COPcorr(iFP,X:Y,:) = COPnoCorr;
+        Forces(iFP,:,:) = Force;
+    else
+        % Set non-loaded phases to Fill if wanted (Fill==0 : force plate center)
+        COP(iFP,X:Y,:) = Fill;
+        COPcorr(iFP,X:Y,:) = Fill;
+        Forces(iFP,:,:) = 0;
     end
 
     %% shift to Forceplate location
-    if IsKistler
+    if any(contains(Type,'Kistler'))
         LcX = mean(Location(:,X)); % plate center in X
         LcY = mean(Location(:,Y)); % plate centre in Y
-        COP( FPNo,X,:) = COP( FPNo,X,:) + LcX;
-        COP( FPNo,Y,:) = COP( FPNo,Y,:) + LcY;
-        COPcorr(FPNo,X,:) = COPcorr(FPNo,X,:) + LcX;
-        COPcorr(FPNo,Y,:) = COPcorr(FPNo,Y,:) + LcY;
+        COP( iFP,X,:) = COP( iFP,X,:) + LcX;
+        COP( iFP,Y,:) = COP( iFP,Y,:) + LcY;
+        COPcorr(iFP,X,:) = COPcorr(iFP,X,:) + LcX;
+        COPcorr(iFP,Y,:) = COPcorr(iFP,Y,:) + LcY;
     end
 
     %% if just one plate is requested, return the data just for that plate
     if length(FPNumbers)==1
-        COPcorr = squeeze(COPcorr(FPNo,:,:));
-        COP     = squeeze(COP(FPNo,:,:));
+        COPcorr = squeeze(COPcorr(iFP,:,:));
+        COP     = squeeze(COP(iFP,:,:));
     end
 end
 
+%% crop to the edges of the force plate if desired
+if DoCrop
+    COP     = cropForcesToForcePlates(COP,    [],Locations,Fill);
+    COPcorr = cropForcesToForcePlates(COPcorr,[],Locations,Fill);
+end
+
+% Debug plot if desired
+if IsPLOT
+    figure;hold on;
+    title('getCOPfromAnalog : the calculated COP for all plates')
+    for iFP=1:NPlates
+        COPi=squeeze(COPcorr(iFP,:,:));
+        COPi(:,~IsLoadedAll(iFP,:)) = nan;
+        plot3(COPi(1,:),COPi(2,:),COPi(3,:),'.-');
+        Loc = squeeze(Locations(iFP,:,:));
+        Loc = [Loc; Loc(1,:)]; 
+        plot3(Loc(:,1),Loc(:,2),Loc(:,3),'linewidth',2)
+    end
+end
 end
 
 %% ========================================================================

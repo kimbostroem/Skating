@@ -40,6 +40,7 @@ function [DataFilled,Prefix,LabelsClean] = doGapfillingRGB(Data,Pref)
 % version 22 230207 (MdL & LK) fixed bug that caused unfilling of only the last gap; reporting of
 % all-gap trajectory
 % version 230418 (MdL) fixed error in fill6dof2 and fill6dof3
+% version 230630 (MdL) fixed error that would make erroneous gaps in a filled marker
 
 %% init
 narginchk(1,2);
@@ -436,7 +437,7 @@ if Pref.DoFillSingleMarkers
             end
             % Remove track jumps 
             Filled = removeTrackJumps(Filled,Freq,[],Pref.MaxJump,SaveLargeJumpFigAs);
-            Filled(Unfill) = nan;
+            Filled(:,Unfill) = nan;
             % write current marker back to data structure
             DataFilled.Trajectories.Labeled.Data(La,1:3,:) = Filled/Scale;
         end
@@ -722,8 +723,6 @@ IsGapAll = reshape(any(isnan(RigidBody),2),Nm,Ns);
 NPresent = Nm - sum(IsGapAll,1);
 Gaps1    = NPresent==1; % one marker present
 IsGapsFilled = false(size(IsGapAll));
-%figure;hold on; for i=1:Nm, plot(IsGapAll(i,:)+i*1.1); end
-%figure;plot(NPresent)
 
 %% stop if there are no gaps to fill
 if ~any(Gaps1)
@@ -797,7 +796,7 @@ for i=1:NGaps
     end
     %% fill with the translation of the reference vector + the rotating vector times the length scaling compensation
     Filled(MFill(i),:,St(i):En(i)) = Ref(:,St(i):En(i)) + TVec(:,2:end-1).*Scale(2:end-1);
-    %figure;plot(squeeze(Filled(MFill(i),:,St1(i)-25:En1(i)+25))');
+    % figure;plot(squeeze(Filled(MFill(i),:,St(i)-25:En(i)+25))');
 end
 IsGapsFilled = reshape(any(isnan(Filled),2),Nm,Ns);
 IsGapsFilled = IsGapAll & ~IsGapsFilled;

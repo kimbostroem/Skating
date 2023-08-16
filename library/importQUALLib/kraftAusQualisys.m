@@ -1,5 +1,6 @@
-function [ Force, Frequency, COP, Moment, Location, Analog, ForceBoard ] = kraftAusQualisys( Data, Scale, ForcePlateLabels )
-%% extract the force signals from a QTM mat structure
+function [ Force, Frequency, COP, Moment, Location, Analog, BoardNames ] = kraftAusQualisys( Data, Scale, ForcePlateLabels )
+%% Extract the force signals from a QTM mat structure
+% Returns ground ACTION forces, i.e. the vertical component is in negative-Z when loaded
 % 
 % SYNTAX
 % Force = kraftAusQualisys(Data);
@@ -17,7 +18,7 @@ function [ Force, Frequency, COP, Moment, Location, Analog, ForceBoard ] = kraft
 %     Moment    	(NPlates x 3D x NSamples double) imported force moment data
 %     Location   	(NPlates x 3D double x 4) imported locations of the force plate corners
 %     Analog     	(NChannels x NSamples) imported analog signals of the force plates
-%     ForceBoard	(dimension and type) Description [optional units]
+%     BoardNames	(cell array) BoardNames in Data.Analog structure
 %
 % EXAMPLE 
 % see syntax above; note that just one input parameter is mandatory
@@ -34,6 +35,8 @@ function [ Force, Frequency, COP, Moment, Location, Analog, ForceBoard ] = kraft
 % Version 230221 (MH) removed isMedianPositive Check
 % Version 230419 (MdL) check if field ForcePlateOrientation exists (in old files it may be absent)
 % Version 230421 (MdL) ignore extra analog channels
+% Version 230516 (MdL) give BoardNames a value
+% Version 230522 (MdL) fixed unknown variable Forces -> Force
 
 narginchk(1,3);
 if nargin < 2 || ~Scale || isempty(Scale),  Scale=1; end
@@ -48,7 +51,7 @@ COP       = [];
 Moment    = [];
 Location  = [];
 Analog    = [];
-ForceBoard= '';
+BoardNames= {''};
 Y=2;Z=3;XY=1:2; %#ok<NASGU>
 
 % parameters for force data
@@ -97,18 +100,15 @@ if isfield(Data,'Force') && ~isempty(Data.Force)
     end
 end
 % Plausibility check
-if ~isempty(Force)
-    % Z- force across all plates
-    SumLoad = squeeze(sum(Force(:,Z,:)));
-    IsMeanPositive = mean(SumLoad,'omitnan') > 0;
-    IsMaxPositive = max(SumLoad,[],'omitnan') > -min(SumLoad,[],'omitnan');
-    if IsMeanPositive && IsMaxPositive
+IsReactionForces = isReactionForce(Force);
+if IsReactionForces
+    % in c3d files, the extraction of the sign of force is not reliable, so 
+    % change the sign automatically
+    if endsWith(Data.File,'.c3d')
+        Force = -Force;
+        warning('kraftAusQualisys : the sign of the forces is unplausible: reversing the sign');
+    else
         warning('kraftAusQualisys : the sign of the forces seems unplausible');
-        % in c3d files, the extraction of the sign of force is not reliable, so 
-        % change the sign automatically
-        if endsWith(Data.File,'.c3d')
-            Force = -Force;
-        end
     end
 end
 

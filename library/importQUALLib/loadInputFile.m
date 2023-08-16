@@ -21,7 +21,7 @@ function [Data,SimInMN,Flag,Msgs] = loadInputFile(FPath,Flag,Msgs)
 % 
 % Local functions: omitEmptyTheiaEnd
 %
-% see also: importQUAL, importBodyFromQUAL
+% see also: importBodyFromQUAL
 % 
 % (c) 2023 Predimo GmbH
 % Website: http://www.predimo.com

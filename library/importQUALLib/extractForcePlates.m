@@ -28,10 +28,14 @@ function   [Stream,Msgs,Flag] = extractForcePlates(Stream, Data, DefBody, Segmen
 % (c) 2021 by Predimo GmbH
 % Website: http://www.predimo.com
 % Author: Marc de Lussanet
-% version: 230125 (MdL) improved variable names
-% version: 230222 (MdL) fixed output parameter list for getCOPfromAnalog
-% version: 230306 (MdL) improvements in plotting function
+% version 230125 (MdL) improved variable names
+% version 230222 (MdL) fixed output parameter list for getCOPfromAnalog
+% version 230306 (MdL) improvements in plotting function
 % version 230310 (MdL) handle Units
+% version 230516 (MdL) provide force plate Type to getCOPfromAnalog
+% version 230616 (MdL) changed function name addWorldObject to structuredGroundLevel
+% version 230622 (MdL) Plot worldObjects with COP and 3D plotting of COP with markers
+% version 230804 (MdL) crop after applying the world objects
 
 %% init
 DoInsert_IsContact       = false; % flag for adding the detected contact time samples
@@ -40,7 +44,7 @@ ThresholdCOPDist         = Info.ThresholdCOPDist;
 ThresholdForceItemHeight = Info.ThresholdForceItemHeight;
 QTMTimeSRint             = Info.QTMTimeSRint;
 DEBUGplot                = false;
-WorldObjects             = DefBody.worldObjects;
+WorldObjects             = makeWorldObjectsStruct(DefBody.worldObjects);
 X=1;Z=3;
 
 % get force data form QTM structure
@@ -57,7 +61,7 @@ if isfield(Data,'Units')
 else
     Scale = 1;
 end
-[ForceRaw, ~, COP0, ~, Location, Analog] = kraftAusQualisys(Data, Scale, Info.ForcePlateLabels);
+[ForceRaw, ~, COP0, ~, Location, Analog,Type] = kraftAusQualisys(Data, Scale, Info.ForcePlateLabels);
 
 % if any forces have been measured
 IsPresentForcesAndMarkers = ~isempty(ForceRaw) && isfield(Stream,'markers') && ~isempty(Stream.markers);
@@ -85,10 +89,25 @@ if IsPresentForcesAndMarkers
 
     % Recalculate the COP, if the Analog data have been exported, too.
     % From those, the COP can be calculated much more accurately
-    [COP,~,ForceRaw,Loaded,~,Msgs,Flag] = getCOPfromAnalog(Analog,ForceRaw,[],Location,FFreq(1),[],[],[],COP0);
+    [COP,~,ForceRaw,Loaded,~,Msgs,Flag] = getCOPfromAnalog(Analog,ForceRaw,[],Location,FFreq(1),[],[],[],COP0,Type);
 
     %% Changing height here!!
-    COP = addWorldObject(COP, ForceRaw, WorldObjects);
+    if max([WorldObjects.objectID]) > 0
+        % apply the ground level to the COPs
+        for pl = 1:nForceplates
+            COP(pl,:,:) = getGroundLevel(squeeze(COP(pl,:,:)), WorldObjects, squeeze(ForceRaw(pl,:,:)));
+        end
+        % draw the cop positions in the object-world
+        Positions = COP;
+        for pl = 1:nForceplates
+            Positions(pl,:,~Loaded(pl,:)) = nan; 
+        end
+        Positions = permute(Positions,[2 3 1]);
+        Positions = reshape(Positions,[3, nForceplates * nSampForce]);
+        drawWorld(DefBody,Positions);
+    end
+    % crop the COP and force where the COP is outside the plate (and at ground level)
+    [COP,ForceRaw] = cropForcesToForcePlates(COP,ForceRaw,Location);
 
     % Resample to internal sampling rate (internalSR)
     ForceSRi = zeros(nForceplates,3,NSintQTM);
@@ -139,7 +158,7 @@ if IsPresentForcesAndMarkers
     ItemMinHeight = nan(nForceItems,NSintQTM);
     MinItemDistSq = nan(nForceItems,nForceplates,NSintQTM);
     if DEBUGplot
-        FH = figure;hold on; title('x-y plot of markers and COP');
+        FH = figure;hold on; title('x-y-z plot of markers and COP');
         MarkerNames = {Stream.markers.name};
     end
     for iForceItem=PresentForceItemIDs 
@@ -176,26 +195,38 @@ if IsPresentForcesAndMarkers
             ItemMarkersDistThresholded(IsDistanceMoreThanThreshold) = nan;
             % get the minimum distance
             MinItemDistSq(iForceItem,pl,:) = min(ItemMarkersDistThresholded,[],1);
-            if DEBUGplot && (iForceItem==3 || iForceItem == 4)
-                if any(sqrt(ItemMarkersDistSquared)' < ThresholdCOPDist,'all')
-                    figure; 
-                    subplot(1,2,1)
-                    plot(sqrt(ItemMarkersDistSquared)'); title(sprintf('distance from COP %d, %s',pl,strrep(ForceItemLabels{iForceItem},'_','\_')));
-                    MarkerLabels = regexprep(MarkerNames,'_',' '); %#ok<NODEF> 
-                    legend(MarkerLabels{sum(IdsOfForceItem==MarkerIDs,'native')})
-                    
-                    subplot(1,2,2);hold on; title(sprintf('x-y plot of markers and COP: pl %d, %s',pl,strrep(ForceItemLabels{iForceItem},'_','\_')));
-                    plot(squeeze(ForceItemMarkers(:,1,IsLoaded(pl,:)))',squeeze(ForceItemMarkers(:,2,IsLoaded(pl,:)))')
-                    plot(COPpl(1,:),COPpl(2,:),'LineWidth',2); 
+            if DEBUGplot %&& (iForceItem==3 || iForceItem == 4)
+                % if any(sqrt(ItemMarkersDistSquared)' < ThresholdCOPDist,'all')
+                %     figure; 
+                %     subplot(1,2,1)
+                %     plot(sqrt(ItemMarkersDistSquared)'); title(sprintf('distance from COP %d, %s',pl,strrep(ForceItemLabels{iForceItem},'_','\_')));
+                %     MarkerLabels = regexprep(MarkerNames,'_',' '); 
+                %     legend(MarkerLabels{sum(IdsOfForceItem==MarkerIDs,'native')})
+                % 
+                %     subplot(1,2,2);hold on; title(sprintf('x-y plot of markers and COP: pl %d, %s',pl,strrep(ForceItemLabels{iForceItem},'_','\_')));
+                %     plot(squeeze(ForceItemMarkers(:,1,IsLoaded(pl,:)))',squeeze(ForceItemMarkers(:,2,IsLoaded(pl,:)))')
+                %     plot(COPpl(1,:),COPpl(2,:),'LineWidth',2); 
+                %     IsNearest = ~isnan(ItemMarkersDistThresholded(1,:));
+                %     plot(squeeze(ForceItemMarkers(:,1,IsNearest))',squeeze(ForceItemMarkers(:,2,IsNearest))','.');
+                %     plot(COPpl(1,IsNearest),COPpl(2,IsNearest),'LineWidth',4); axis('equal')
+                %     axis('equal')
+                % end
+                if any(~isnan(COPpl),'all')
+                    figure(FH); hold on;
+                    title('Debug plot for extractForcePlates:','COP traces on all plates, and loaded markers');
+                    FPLoc = squeeze(Location(pl,:,:));
+                    FPLoc = [FPLoc(4,:); FPLoc]; %#ok<AGROW>
                     IsNearest = ~isnan(ItemMarkersDistThresholded(1,:));
-                    plot(squeeze(ForceItemMarkers(:,1,IsNearest))',squeeze(ForceItemMarkers(:,2,IsNearest))','.');
-                    plot(COPpl(1,IsNearest),COPpl(2,IsNearest),'LineWidth',4); axis('equal')
-                    axis('equal')
-                end
-                if any(~isnan(COPpl),'all') && (iForceItem==3 || iForceItem == 4)
-                    figure(FH); %#ok<NODEF> 
-                    plot(squeeze(ForceItemMarkers(:,1,IsLoaded(pl,:)))',squeeze(ForceItemMarkers(:,2,IsLoaded(pl,:)))')
-                    plot(COPpl(1,:),COPpl(2,:),'LineWidth',2); axis('equal')
+                    plot3(...
+                        squeeze(ForceItemMarkers(:,1,IsLoaded(pl,:)))',...
+                        squeeze(ForceItemMarkers(:,2,IsLoaded(pl,:)))',...
+                        squeeze(ForceItemMarkers(:,3,IsLoaded(pl,:)))')
+                    plot3(...
+                        squeeze(ForceItemMarkers(:,1,IsNearest))',...
+                        squeeze(ForceItemMarkers(:,2,IsNearest))',...
+                        squeeze(ForceItemMarkers(:,3,IsNearest))','.')
+                    plot3(COPpl(1,:),COPpl(2,:),COPpl(3,:),'LineWidth',2); axis('equal')
+                    plot3(FPLoc(:,1),FPLoc(:,2),FPLoc(:,3),'LineWidth',2); axis('equal')
                 end
             end
         end
