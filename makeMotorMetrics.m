@@ -142,7 +142,7 @@ for iFile = 1:nFiles
                 % method 1 using fminsearch (faster)
                 options = optimset('Display', 'off');
                 ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);
-                fprintf('\tSuccesfully estimated beam distance at %fm with slope %f\n', coefficients(1), coefficients(2));
+                fprintf('\t\tEstimated beam distance at %fm with slope %f\n', coefficients(1), coefficients(2));
 
                 nSamples = size(COPx, 2);
                 deviation = nan(1, nSamples);
@@ -184,9 +184,45 @@ for iFile = 1:nFiles
     end
 
     % jerk
+    %
     dForce = diff(Force, 1, 2);
     Jerk = [dForce, dForce(:, end)] / (dt * subjectWeight);
     Jerk(:, ~idxContact) = 0; % remove jerk around gaps
+
+    % remove jerk peaks (caused by stepping)
+    %
+    warning('off', 'signal:findpeaks:largeMinPeakHeight');
+    % minPeakHeight = 200; % threshold to count value as peak [m/s^3]
+    maxPeakWidth = 5; % maximum peak width to be removed
+    nSamples = size(Jerk, 2);
+    [~, pks] = findpeaks(abs(Jerk(3, :)), 'MaxPeakWidth', maxPeakWidth);    
+    if ~isempty(pks)
+        idxPeaks = false(1, nSamples);
+        idxPeaks(pks) = true;
+        peakMarginSmp = 2; % gap margin in samples
+        % find the beginnings of each gap
+        peakStart = [-1, find(idxPeaks)];
+        dPeakStart = [1, diff(peakStart)];
+        peakStart(dPeakStart == 1) = [];
+        % find the endings of the gaps
+        peakStop = [find(idxPeaks), nSamples+2];
+        dPeakStop = [diff(peakStop), 1];
+        peakStop(dPeakStop == 1) = [];
+        % enlarge the peak regions by margin
+        peakStart = peakStart - peakMarginSmp;
+        peakStop = peakStop + peakMarginSmp;
+        % keep within data range
+        peakStart(peakStart < 1)  = 1;
+        peakStop(peakStop > nSamples) = nSamples;
+        % re-create bool array for non-gap indices
+        for iSample = 1:length(peakStart)
+            idxPeaks(peakStart(iSample):peakStop(iSample)) = true;
+        end
+        Jerk(:, idxPeaks) = NaN; % remove jerk around peaks
+        fprintf('\t\tRemoved %d peaks in jerk\n', length(pks));
+    else
+        % fprintf('\t\tNo peaks found in Jerk\n');
+    end
 
     % path length
     pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
