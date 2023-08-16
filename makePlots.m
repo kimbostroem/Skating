@@ -187,7 +187,7 @@ for iMeas = 1:nMeas
             Deviation = Measurements.MotorData(iMeas).Deviation;
             Jerk = Measurements.MotorData(iMeas).Jerk;
             TargetError = Measurements.MotorMetrics.TargetError(iMeas);
-            jumpStopPos = Measurements.MotorData(iMeas).jumpStopPos;
+            landingPos = Measurements.MotorData(iMeas).landingPos;
             [~, targetIdx] = min(Deviation);
 
             % plot COP path with jump stop position
@@ -197,7 +197,7 @@ for iMeas = 1:nMeas
             scatter(COP(1, :), COP(2, :), 2, 'blue');
             scatter(startPos(1,:)', startPos(2,:)', 5, 'green', 'filled');
             scatter(stopPos(1,:)', stopPos(2,:)', 5, 'red', 'filled');
-            scatter(jumpStopPos(1), jumpStopPos(2), 10, 'red', 'x')
+            scatter(landingPos(1), landingPos(2), 10, 'red', 'x')
             xline(startPos(1), 'g');
             xline(stopPos(1), 'r');
             title(sprintf('COP path'), 'Interpreter', 'none');
