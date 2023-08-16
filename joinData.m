@@ -2,16 +2,13 @@ function joinData()
 
 fprintf('\nJoining Data...\n');
 
-allDir = 'All';
-
-% get outDir
-outDir = evalin('base', 'outDir');
-
-if ~isfolder(fullfile(outDir, allDir))
-    mkdir(fullfile(outDir, allDir));
+allDir = evalin('base', 'allDir');
+parentOutDir = evalin('base', 'parentOutDir');
+outDir = fullfile(parentOutDir, allDir);
+if ~isfolder(outDir)
+    mkdir(outDir);
 end
-
-dirInfo = dir(outDir);
+dirInfo = dir(parentOutDir);
 outDirs = {dirInfo.name}';
 idxExclude = startsWith(outDirs', {'.', '~', allDir}) | ~[dirInfo.isdir];
 outDirs(idxExclude) = [];
@@ -25,7 +22,7 @@ end
 Measurements.MotorData = struct([]);
 
 for iDir = 1:length(outDirs)
-    myOutDir = fullfile(outDir, outDirs{iDir});
+    myOutDir = fullfile(parentOutDir, outDirs{iDir});
 
     % load Measurements structure
     fprintf('Loading Measurements structure from %s...\n', myOutDir);
@@ -54,7 +51,7 @@ AllTables = struct;
 for iTable = 1:length(tableNames)
     tableName = tableNames{iTable};
     fprintf('Saving %s...\n', tableName);
-    saveTable(Measurements.(tableName), tableName, {'csv'}, fullfile(outDir, allDir));
+    saveTable(Measurements.(tableName), tableName, {'csv'}, outDir);
     AllTables.(tableName) = Measurements.(tableName);
 end
 
@@ -79,10 +76,13 @@ assignin('base', 'AllTables', AllTables);
 fprintf('Saving AllTables structure to MAT file...\n');
 tic
 % save AllTables structure to MAT file
-save(fullfile(outDir, allDir, 'AllTables.mat'), 'AllTables');
+save(fullfile(outDir, 'AllTables.mat'), 'AllTables');
 fprintf('DONE in %.3f seconds\n', toc);
 
-fprintf('If necessary, save current state using ''saveState''\n');
+% export outDir to base workspace, so that subsequent saveTable saves into
+% the correct folder
+assignin('base', 'outDir', outDir);
+saveState
 
 
 
