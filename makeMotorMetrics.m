@@ -107,19 +107,19 @@ for iFile = 1:nFiles
 
     % get variables
     subjectWeight = MotorMetrics(item).Weight;
-    TimeForce = Measurements.MotorData(iFile).TimeForce;
+    Time = Measurements.MotorData(iFile).Time;
     Force = Measurements.MotorData(iFile).Force;
     COP = Measurements.MotorData(iFile).COP;
     idxContact = Measurements.MotorData(iFile).idxContact;
-    sampleRateForce = Measurements.MotorData(iFile).sampleRateForce;
+    sampleRate = Measurements.MotorData(iFile).sampleRate;
     stopPos = Measurements.MotorData(iFile).stopPos;
 
-    if isempty(sampleRateForce)
+    if isempty(sampleRate)
         fprintf('\t\tEmpty dataset - skipping\n');
         continue
     end
 
-    dt = 1/sampleRateForce; % time step size [s]
+    dt = 1/sampleRate; % time step size [s]
     % task = MotorMetrics(item).Task;
 
     switch task
@@ -174,13 +174,16 @@ for iFile = 1:nFiles
             
         case 'Sprung'
             % get jump landing point
-            landingPos = getLandingPos(Measurements.MotorData(iFile).COP);
-            if isnan(landingPos)
-                fprintf('\t\tNo landing position detected -> set targetError to NaN\n');
+            landingPos = getLandingPos(Measurements.MotorData(iFile).COP, Measurements.MotorData(iFile).footPos);
+            if any(isnan(landingPos)) || any(isnan(stopPos))
+                fprintf('\t\tNo landing position detectable -> set targetError to NaN\n');
+                targetError = NaN;
+                Measurements.MotorData(iFile).landingPos = NaN;
+            else
+                % distance to jump stop position
+                targetError = abs(landingPos(1) - stopPos(1));
+                Measurements.MotorData(iFile).landingPos = landingPos;
             end
-            % distance to jump stop position
-            targetError = abs(landingPos(1) - stopPos(1));
-            Measurements.MotorData(iFile).landingPos = landingPos;
     end
 
     % jerk
@@ -225,7 +228,7 @@ for iFile = 1:nFiles
     end
 
     % path length
-    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(TimeForce));
+    pathLength = sum(vecnorm(diff(COP, 1, 2), 2, 1), 2, 'omitnan')/sum(diff(Time));
 
     targetErrorName = 'TargetError';
 

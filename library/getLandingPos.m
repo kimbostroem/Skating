@@ -1,4 +1,4 @@
-function landingPos = getLandingPos(COP)
+function landingPos = getLandingPos(COP, footPos)
 
 minGapLength = 0.3;
 nAvg = 20; % take median over these many samples after landing to get a more stable estimate of the landing position
@@ -19,11 +19,11 @@ gapStops(idx) = [];
 % remove gaps that are too short
 gapSizes = vecnorm(COP(:, gapStops+1) - COP(:, gapStarts-1));
 idx = (gapSizes < minGapLength);
-gapStarts(idx) = [];
 gapStops(idx) = [];
 
 if ~isempty(gapStops)
-    landingPos = median(COP(:, gapStops(1)+1:gapStops(1)+1+nAvg), 2);
+    idxAvg = gapStops(1)+1:gapStops(1)+1+nAvg;
+    landingPos = median(footPos(:, idxAvg), 2);
 else
     landingPos = NaN;
 end
