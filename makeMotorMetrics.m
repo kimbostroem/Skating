@@ -8,6 +8,9 @@ outlierThresholdFactor = 4;
 % load current state
 Measurements = loadState();
 
+% get outDir
+outDir = evalin('base', 'outDir');
+
 % load table containing subjects info
 SubjectsTable = Measurements.Subjects;
 
@@ -18,18 +21,18 @@ ticAll = tic;
 item = 1; 
 MotorMetrics = struct([]);
 for iFile = 1:nFiles    
-    fname = Measurements.MotorData(iFile).fileName;
+    fileName = Measurements.MotorData(iFile).fileName;
 
     % skip invalid files
-    if isempty(fname) || contains(fname, 'ungueltig', 'IgnoreCase', true)
-        fprintf('\t-> Skipping invalid file %s\n', fname);
+    if isempty(fileName) || contains(fileName, 'ungueltig', 'IgnoreCase', true)
+        fprintf('\t-> Skipping invalid file %s\n', fileName);
         continue
     end    
 
     tic
 
     % split file name at underscores
-    parts = strsplit(fname, '_');
+    parts = strsplit(fileName, '_');
 
     % subject identity and code
     subject = parts{1};
@@ -103,7 +106,7 @@ for iFile = 1:nFiles
     MotorMetrics(item).Trial = str2double(trial);
 
     % store file name in MotorMetrics(item)
-    MotorMetrics(item).FileName = string(fname);
+    MotorMetrics(item).FileName = string(fileName);
 
     % get variables
     subjectWeight = MotorMetrics(item).Weight;
@@ -165,13 +168,13 @@ for iFile = 1:nFiles
                     distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
                     deviation = arrayfun(distanceFcn, COPx, COPy);
                 end
-                targetError = max(deviation, [], 'omitnan');
+                targetError = mean(deviation, 'omitnan');
 
         case 'Einbein'
                 meanCOP = mean(COP, 2, 'omitnan');
                 deviationFcn = @(x, y) vecnorm([x; y] - meanCOP);
                 deviation = deviationFcn(COP(1, :), COP(2, :));
-                targetError = max(deviation, [], 'omitnan');
+                targetError = mean(deviation, 'omitnan');
             
         case 'Sprung'
             % get jump landing point
@@ -188,7 +191,8 @@ for iFile = 1:nFiles
                     fprintf('targetError bigger than %f -> discard', maxTargetError);
                     fig = makePlot(iFile, Measurements);
                     if ~isempty(fig)
-                        saveFigure(fig, fullfile(outDir, filename), 'fig');
+                        saveFigure(fig, fullfile(outDir, fileName), 'fig');
+                        close(fig);
                     end
                 end                
             end
@@ -269,7 +273,7 @@ for iFile = 1:nFiles
     end
 
     % report progress
-    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', fname, iFile, nFiles, iFile/nFiles*100, toc);
+    fprintf('\t-> %s (%d/%d = %.1f%% in %.3fs)\n', fileName, iFile, nFiles, iFile/nFiles*100, toc);
 
     % increment number of processed files
     item = item+1;    
