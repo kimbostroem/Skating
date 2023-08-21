@@ -325,7 +325,7 @@ Measurements.SkatingTable_subjectMean = SkatingTable_subjectMean;
 fprintf('\t\t- Exporting Measurements structure to base workspace...\n');
 assignin('base', 'Measurements', Measurements);
 
-%% save table to disk
+%% save tables to disk
 
 % write Subjects table
 fprintf('Saving Subjects table...\n');
