@@ -164,13 +164,13 @@ for iFile = 1:nFiles
                     distanceFcn = @(x, y) min(vecnorm([x; y] - [BeamX; BeamY]));
                     deviation = arrayfun(distanceFcn, COPx, COPy);
                 end
-                targetError = mean(deviation, 'omitnan');
+                targetError = max(deviation, [], 'omitnan');
 
         case 'Einbein'
                 meanCOP = mean(COP, 2, 'omitnan');
                 deviationFcn = @(x, y) vecnorm([x; y] - meanCOP);
                 deviation = deviationFcn(COP(1, :), COP(2, :));
-                targetError = mean(deviation, 'omitnan');
+                targetError = max(deviation, [], 'omitnan');
             
         case 'Sprung'
             % get jump landing point
@@ -191,7 +191,7 @@ for iFile = 1:nFiles
     dForce = diff(Force, 1, 2);
     Jerk = [dForce, dForce(:, end)] / (dt * subjectWeight);
     Jerk(:, ~idxContact) = 0; % remove jerk around gaps
-
+    %
     % remove jerk peaks (caused by stepping)
     %
     warning('off', 'signal:findpeaks:largeMinPeakHeight');
