@@ -217,7 +217,7 @@ for iDir = 1:length(motorDirs)
             end
             % get foot marker data
             idx = ismember(labels, footLabels);
-            footPos = nan(1, nSamples);
+            footPos = nan(3, nSamples);
             if any(idx)
                 pos_raw = MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin)/1000;
                 pos_raw = squeeze(mean(pos_raw, 1, 'omitnan')); % avg over markers
