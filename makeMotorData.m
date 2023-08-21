@@ -207,13 +207,13 @@ for iDir = 1:length(motorDirs)
             if any(idx)
                 pos_raw = MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin)/1000;
                 pos_raw = squeeze(mean(pos_raw, 1, 'omitnan')); % avg over markers
-                startPos = squeeze(mean(pos_raw, 3, 'omitnan'));
+                startPos = mean(pos_raw, 2, 'omitnan');
             end
             idx = strcmp(labels, stopLabel);
             if any(idx)
                 pos_raw = MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin)/1000;
                 pos_raw = squeeze(mean(pos_raw, 1, 'omitnan')); % avg over markers
-                stopPos = squeeze(mean(pos_raw, 3, 'omitnan'));
+                stopPos = mean(pos_raw, 2, 'omitnan');
             end
             % get foot marker data
             idx = ismember(labels, footLabels);
