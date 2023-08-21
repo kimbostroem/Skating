@@ -1,16 +1,38 @@
-init;
+dataSets = {
+%    'PR'
+    'PB'
+    'PRCO'
+    'ProKo'
+    'All'
+    };
 
-diary(fullfile(outDir,'log.txt'));
+for iData = 1:length(dataSets)
+    clear Measurements;
+    close all;
+    dataSet = dataSets{iData};
+    fprintf('Using dataset ''%s''...\n', dataSet);
+    % set folders
+    outDir = fullfile(parentOutDir, dataSet);
+    motorDir = fullfile(inDir, 'Motorisch', dataSet);
+    % create output folder if necessary
+    if ~isfolder(outDir)
+        mkdir(outDir);
+    end
 
-makeSubjects;
-makeMotorData;
-makeMotorMetrics;
-makeCognitionData;
-makeTables;
-saveState;
-% makePlots;
+    diary(fullfile(outDir,'log.txt'));
 
-diary off
+    Measurements = loadState();
+    makeSubjects;
+    makeMotorData;
+    makeMotorMetrics;
+    makeCognitionData;
+    makeTables;
+    saveState;
+    % makePlots;
+
+    diary off
+
+end
 
 
 
