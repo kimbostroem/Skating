@@ -120,7 +120,9 @@ for iFile = 1:nFiles
     end
 
     dt = 1/sampleRate; % time step size [s]
-    % task = MotorMetrics(item).Task;
+    nSamples = length(Time);
+    deviation = nan(1, nSamples);
+    landingPos = nan(3, 1);
 
     switch task
 
@@ -143,9 +145,8 @@ for iFile = 1:nFiles
                 options = optimset('Display', 'off');
                 ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);
                 fprintf('\t\tEstimated beam distance at %fm with slope %f\n', coefficients(2), coefficients(1));
-
-                nSamples = size(COPx, 2);
-                deviation = nan(1, nSamples);
+                
+                
                 exitflag = 1;
                 for iSample = 1:nSamples
                     if ~idxContact(iSample)
@@ -178,11 +179,15 @@ for iFile = 1:nFiles
             if any(isnan(landingPos)) || any(isnan(stopPos))
                 fprintf('\t\tNo landing position detectable -> set targetError to NaN\n');
                 targetError = NaN;
-                Measurements.MotorData(iFile).landingPos = NaN;
             else
                 % distance to jump stop position
                 targetError = abs(landingPos(1) - stopPos(1));
-                Measurements.MotorData(iFile).landingPos = landingPos;
+                maxTargetError = 0.3;
+                if targetError > maxTargetError
+                    targetError = NaN;
+                    fprintf('targetError bigger than %f -> discard', maxTargetError);
+                    makePlot(iFile, Measurements);
+                end                
             end
     end
 
@@ -241,6 +246,7 @@ for iFile = 1:nFiles
     meanJerkZName = 'JerkZ';
 
     % store metrics in structure
+    Measurements.MotorData(iFile).landingPos = landingPos;
     Measurements.MotorData(iFile).Deviation = deviation;
     Measurements.MotorData(iFile).Jerk = Jerk;
     MotorMetrics(item).PathLength = pathLength;
