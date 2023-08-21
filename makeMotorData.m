@@ -222,10 +222,12 @@ for iDir = 1:length(motorDirs)
                 pos_raw = MotorData.Trajectories.Labeled.Data(idx, 1:3, idxKin)/1000;
                 pos_raw = squeeze(mean(pos_raw, 1, 'omitnan')); % avg over markers
                 idxNan = any(isnan(pos_raw),1);
-                if any(idxNan)
-                    pos_raw(:, idxNan) = interp1(TimeKin(~idxNan)', pos_raw(:,~idxNan)', TimeKin(idxNan)', 'pchip')';
+                if ~all(idxNan)
+                    if any(idxNan)
+                        pos_raw(:, idxNan) = interp1(TimeKin(~idxNan)', pos_raw(:,~idxNan)', TimeKin(idxNan)', 'pchip')';
+                    end
+                    footPos = interp1(TimeKin', pos_raw', Time', 'pchip')';
                 end
-                footPos = interp1(TimeKin', pos_raw', Time', 'pchip')';
             end
         end
 
