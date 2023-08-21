@@ -186,7 +186,10 @@ for iFile = 1:nFiles
                 if targetError > maxTargetError
                     targetError = NaN;
                     fprintf('targetError bigger than %f -> discard', maxTargetError);
-                    makePlot(iFile, Measurements);
+                    fig = makePlot(iFile, Measurements);
+                    if ~isempty(fig)
+                        saveFigure(fig, fullfile(outDir, filename), 'fig');
+                    end
                 end                
             end
     end
