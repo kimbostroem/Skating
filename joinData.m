@@ -55,6 +55,8 @@ for iTable = 1:length(tableNames)
     AllTables.(tableName) = Measurements.(tableName);
 end
 
+%% Append tables to Measurements structure
+
 % append SubjectTable
 Measurements.Subjects = myMeasurements.Subjects;
 AllTables.Subjects = myMeasurements.Subjects;
@@ -73,15 +75,42 @@ assignin('base', 'Measurements', Measurements);
 % export AllTables structure to base workspace
 assignin('base', 'AllTables', AllTables);
 
+%% Save tables to disk
+
+% write Subjects table
+fprintf('Saving Subjects table...\n');
+saveTable(Measurements.Subjects, 'SubjectsTable', {'xlsx'}, outDir);
+
+% write Motor table
+fprintf('Saving Motor table...\n');
+saveTable(Measurements.MotorTable, 'MotorTable', {'csv'}, outDir);
+
+% write Cognition table
+fprintf('Saving Cognition table...\n');
+saveTable(Measurements.CognitionTable, 'CognitionTable', {'csv'}, outDir);
+
+% write Skating table 
+fprintf('Saving Skating table...\n');
+saveTable(Measurements.SkatingTable, 'SkatingTable', {'csv'}, outDir);
+
+% write Skating table subjectMean
+fprintf('Saving Skating table averaged per subject...\n');
+saveTable(Measurements.SkatingTable_subjectMean, 'SkatingTable_subjectMean', {'csv'}, outDir);
+
+%% Save AllTables to disk
+
 fprintf('Saving AllTables structure to MAT file...\n');
 tic
 % save AllTables structure to MAT file
 save(fullfile(outDir, 'AllTables.mat'), 'AllTables');
 fprintf('DONE in %.3f seconds\n', toc);
 
+%% save Measurements structure to disk
+
 % export outDir to base workspace, so that subsequent saveTable saves into
 % the correct folder
 assignin('base', 'outDir', outDir);
+% save state
 saveState
 
 
