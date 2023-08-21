@@ -25,7 +25,7 @@ if ~isempty(gapStops)
     idxAvg = gapStops(1)+1:gapStops(1)+1+nAvg;
     landingPos = median(footPos(:, idxAvg), 2);
 else
-    landingPos = NaN;
+    landingPos = nan(3, 1);
 end
 
 end
