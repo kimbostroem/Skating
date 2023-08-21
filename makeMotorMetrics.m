@@ -142,7 +142,7 @@ for iFile = 1:nFiles
                 % method 1 using fminsearch (faster)
                 options = optimset('Display', 'off');
                 ppdistanceFcn = @(x, y, x_) vecnorm([x; y] - [x_; beamYFcn(x_)]);
-                fprintf('\t\tEstimated beam distance at %fm with slope %f\n', coefficients(1), coefficients(2));
+                fprintf('\t\tEstimated beam distance at %fm with slope %f\n', coefficients(2), coefficients(1));
 
                 nSamples = size(COPx, 2);
                 deviation = nan(1, nSamples);
