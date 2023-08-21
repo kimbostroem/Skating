@@ -1,5 +1,11 @@
 function fig = makePlot(iMeas, Measurements)
 
+if ~isfield(Measurements, 'MotorMetrics')
+    fprintf('\tNo field ''MotorMetrics'' to plot -> abort\n');
+    fig = [];
+    return
+end
+
 ticItem = tic;
 
 % get variables
