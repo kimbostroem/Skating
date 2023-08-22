@@ -1,6 +1,6 @@
 dataSets = {
-    'PR'
-    'PB'
+    % 'PR'
+    % 'PB'
     'PRCO'
     'ProKo'
     'All'
@@ -35,7 +35,7 @@ for iData = 1:length(dataSets)
 
     Measurements = loadState();
     makeSubjects;
-    makeMotorData;
+    % makeMotorData;
     makeMotorMetrics;
     makeCognitionData;
     makeTables;
