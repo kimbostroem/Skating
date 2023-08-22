@@ -191,7 +191,7 @@ for iFile = 1:nFiles
                     fprintf('targetError bigger than %f -> discard', maxTargetError);
                     fig = makePlot(iFile, Measurements);
                     if ~isempty(fig)
-                        saveFigure(fig, fullfile(outDir, fileName), 'fig');
+                        saveFigure(fig, fullfile(outDir, fileName), 'pdf');
                         close(fig);
                     end
                 end                
