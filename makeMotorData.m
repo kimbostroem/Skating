@@ -65,7 +65,8 @@ for iDir = 1:length(motorDirs)
 
         % subject identity and code
         subject = parts{1};
-        subjectCode = [subject, '_', parts{2}];
+        stage = parts{2};
+        subjectCode = [subject, '_', stage];
         subjectCodes = [SubjectsTable.Code_I, SubjectsTable.Code_II, SubjectsTable.Code_III];
         [subjectIdx, ~] = find(strcmp(subjectCodes, subjectCode));
         if isempty(subjectIdx)
@@ -76,8 +77,14 @@ for iDir = 1:length(motorDirs)
         % jump position markers
         Beidbein_start = string(SubjectsTable.Beidbein_start(subjectIdx));
         Beidbein_stop = string(SubjectsTable.Beidbein_stop(subjectIdx));
-        Einbein_start = string(SubjectsTable.Einbein_start(subjectIdx));
-        Einbein_stop = string(SubjectsTable.Einbein_stop(subjectIdx));
+        switch stage
+            case 'I'
+                Einbein_start = string(SubjectsTable.Einbein_start_I(subjectIdx));
+                Einbein_stop = string(SubjectsTable.Einbein_stop_I(subjectIdx));
+            case {'II', 'III'}
+                Einbein_start = string(SubjectsTable.Einbein_start_II_III(subjectIdx));
+                Einbein_stop = string(SubjectsTable.Einbein_stop_II_III(subjectIdx));
+        end
 
         % side or Kraft
         if strcmp(parts{4}, 'Kraft')

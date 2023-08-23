@@ -99,9 +99,15 @@ for iFile = 1:nFiles
     % jump position markers
     MotorMetrics(item).Beidbein_start = string(SubjectsTable.Beidbein_start(subjectIdx));
     MotorMetrics(item).Beidbein_stop = string(SubjectsTable.Beidbein_stop(subjectIdx));
-    MotorMetrics(item).Einbein_start = string(SubjectsTable.Einbein_start(subjectIdx));
-    MotorMetrics(item).Einbein_stop = string(SubjectsTable.Einbein_stop(subjectIdx));
-
+    switch stage
+        case 'I'
+            MotorMetrics(item).Einbein_start = string(SubjectsTable.Einbein_start_I(subjectIdx));
+            MotorMetrics(item).Einbein_stop = string(SubjectsTable.Einbein_stop_I(subjectIdx));
+        case {'II', 'III'}
+            MotorMetrics(item).Einbein_start = string(SubjectsTable.Einbein_start_II_III(subjectIdx));
+            MotorMetrics(item).Einbein_stop = string(SubjectsTable.Einbein_stop_II_III(subjectIdx));
+    end
+    
     % trial number
     MotorMetrics(item).Trial = str2double(trial);
 
