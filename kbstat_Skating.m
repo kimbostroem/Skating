@@ -51,8 +51,8 @@ options.posthocMethod = 'ttest';
 options.removeOutliers = 'true';
 options.isRescale = true;
 options.errorBars = 'se';
-options.constraint = 'ADHS == 1';
-% options.constraint = 'ADHS == 1 & Stage == 2';
+% options.constraint = 'ADHS == 1';
+options.constraint = 'ADHS == 1 & Stage <= 2';
 
 %% Analysis of Motor data
 
