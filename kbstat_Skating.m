@@ -44,29 +44,32 @@ options.id = 'Subject';
 % options.x = 'Intervention, ADHS';
 % options.within = 'Intervention';
 % options.interact = 'Intervention, ADHS';
-options.x = 'Stage, Skating';
+options.x = 'Stage, ADHS';
 options.within = 'Stage';
-options.interact = 'Stage, Skating';
+options.interact = 'Stage, ADHS';
 options.posthocMethod = 'ttest';
 options.removeOutliers = 'true';
 options.isRescale = true;
 options.errorBars = 'se';
+% options.constraint = 'ADHS     == 1';
+% options.constraint = 'ADHS == 1 & Stage <= 2';
+% options.constraint = 'Stage <= 2';
 % options.constraint = 'ADHS == 1';
-options.constraint = 'ADHS == 1 & Stage <= 2';
+options.constraint = 'Skating == 1 & Stage <= 2';
 
 %% Analysis of Motor data
 
-% depVars = {'Jerk', 'TargetError', 'PathLength'};
-% depVarUnitss = {'m/s^3', 'm', 'm'};
+depVars = {'TargetError'};
+depVarUnitss = {'m'};
+tasks = {'Balance', 'Sprung', 'Einbein'};
+distributions = {'gamma'};
+links = {''};
+% meanFlags = [1, 0];
+% depVars = {'TargetError', 'Jerk', 'PathLength'};
+% depVarUnitss = {'m', 'm/s^3', 'm'};
 % tasks = {'Balance', 'Sprung', 'Einbein'};
 % distributions = {'gamma', 'gamma', 'gamma'};
 % links = {'', '', ''};
-% meanFlags = [1, 0];
-depVars = {'TargetError'};
-depVarUnitss = {'m'};
-tasks = {'Balance', 'Sprung'};
-distributions = {'gamma'};
-links = {''};
 meanFlags = 0;
 
 optionsOrig = options;
@@ -122,10 +125,10 @@ end
 
 %% Analysis of Cognition data
 
-depVars = {'D2_Error', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
-depVarUnitss = {'', '', '', ''};
-distributions = {'gamma', 'gamma', 'normal', 'normal'};
-links = {'', '', '', ''};
+depVars = {'D2_Completed','D2_Concentration', 'Stroop', 'AttentionDeficit', 'Hyperactivity'};
+depVarUnitss = {'', '', '', '', ''};
+distributions = {'gamma', 'gamma', 'gamma', 'normal', 'normal'};
+links = {'', '', '', '', ''};
 
 optionsOrig = options;
 if isfield(options, 'constraint')
