@@ -57,8 +57,7 @@ options.constraint = 'Skating == yes & Stage ~= t3';
 depVars = {'TargetError'};
 depVarUnitss = {'m'};
 tasks = {'Balance', 'Sprung', 'Einbein'};
-distributions = {'inverseGaussian'};
-links = {-2};
+distributions = {'gamma'};
 % meanFlags = [1, 0];
 % depVars = {'TargetError', 'Jerk', 'PathLength'};
 % depVarUnitss = {'m', 'm/s^3', 'm'};
@@ -75,9 +74,6 @@ else
 end
 for iVar = 1:length(depVars)
     depVar = depVars{iVar};
-    depVarUnits = depVarUnitss{iVar};
-    distribution = distributions{iVar};
-    link = links{iVar};
     for iTask = 1:length(tasks)
         task = tasks{iTask};
         for iFlag = 1:length(meanFlags)
@@ -107,11 +103,23 @@ for iVar = 1:length(depVars)
                     options.y = depVar;
                     options.outDir = sprintf('%s/NoSubjectMean/%s', resultsDir, depVar);
                 end
-                
+
             end
-            options.yUnits = depVarUnits;
-            options.distribution = distribution;
-            options.link = link;
+            if length(depVarUnitss) == 1
+                options.yUnits = depVarUnitss{1};
+            else
+                options.yUnits = depVarUnitss{iVar};
+            end
+            if exist('distributions', 'var') && length(distributions) == 1
+                options.distribution = distributions{1};
+            elseif exist('distributions', 'var')
+                options.distribution = distributions{iVar};
+            end
+            if exist('links', 'var') && length(links) == 1
+                options.link = links{1};
+            elseif exist('links', 'var')
+                options.link = links{iVar};
+            end
             kbstat(options);
             options = optionsOrig;
         end
