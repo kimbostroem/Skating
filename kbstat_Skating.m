@@ -41,29 +41,24 @@ resultsDir = '../Skating_Stats';
 
 options = struct;
 options.id = 'Subject';
-% options.x = 'Intervention, ADHS';
-% options.within = 'Intervention';
-% options.interact = 'Intervention, ADHS';
 options.x = 'Stage, ADHS';
 options.within = 'Stage';
 options.interact = 'Stage, ADHS';
-options.posthocMethod = 'ttest';
+options.posthocMethod = 'emm';
 options.removeOutliers = 'true';
+% options.outlierThreshold = 2;
+% options.outlierLevel = 1;
 options.isRescale = true;
 options.errorBars = 'se';
-% options.constraint = 'ADHS     == 1';
-% options.constraint = 'ADHS == 1 & Stage <= 2';
-% options.constraint = 'Stage <= 2';
-% options.constraint = 'ADHS == 1';
-options.constraint = 'Skating == 1 & Stage <= 2';
+options.constraint = 'Skating == yes & Stage ~= t3';
 
 %% Analysis of Motor data
 
 depVars = {'TargetError'};
 depVarUnitss = {'m'};
 tasks = {'Balance', 'Sprung', 'Einbein'};
-distributions = {'gamma'};
-links = {''};
+distributions = {'inverseGaussian'};
+links = {-2};
 % meanFlags = [1, 0];
 % depVars = {'TargetError', 'Jerk', 'PathLength'};
 % depVarUnitss = {'m', 'm/s^3', 'm'};
