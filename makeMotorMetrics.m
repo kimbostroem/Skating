@@ -49,7 +49,7 @@ for iFile = 1:nFiles
     stages = {'I', 'II', 'III'};
     stageStr = parts{2};
     stage = find(strcmp(stages, stageStr), 1, 'first');
-    MotorMetrics(item).Stage = stage;
+    MotorMetrics(item).Stage = sprintf('t%d', stage);
 
     % subject properties with trailing 'I', 'II', or 'III'
     subjectProps = {'Height', 'Weight', 'Age', 'Date'};
@@ -70,15 +70,15 @@ for iFile = 1:nFiles
     [~, subjectStages] = find(contains(subjectCodes, subject));
     switch stageStr
         case 'I'
-            intervention = 0;
+            intervention = 'no';
         case 'II'
             if max(subjectStages) == 3 % subject has been tested at three stages, with intervention in 3rd stage
-                intervention = 0;
+                intervention = 'no';
             else
-                intervention = 1;
+                intervention = 'yes';
             end
         case 'III'
-            intervention = 1;
+            intervention = 'yes';
     end
     MotorMetrics(item).Intervention = intervention;
 
