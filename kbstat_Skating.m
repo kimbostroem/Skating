@@ -40,11 +40,17 @@ resultsDir = '../Skating_Stats';
 %% Global options
 
 options = struct;
-options.inFile = '../Skating_Out/All/SkatingTable.csv';
-options.id = 'Subject';
 options.posthocMethod = 'emm';
 options.removeOutliers = 'true';
 options.isRescale = true;
+
+controlGroups = {'ADHS', 'Skating'};
+
+
+%% Analysis of Motor data
+
+options.inFile = '../Skating_Out/All/SkatingTable.csv';
+options.id = 'Subject';
 
 metrics = {
     'TargetError'
@@ -65,13 +71,11 @@ distributions = {
     'gamma'
     };
 
-controlGroups = {'ADHS', 'Skating'};
 
 for iControl = 1:length(controlGroups)
     controlGroup = controlGroups{iControl};
-
     switch controlGroup
-        case 'ADHS'            
+        case 'ADHS'
             options.x = 'Stage, Skating, Medication';
             options.within = 'Stage';
             options.interact = 'Stage, Skating, Medication';
@@ -82,9 +86,6 @@ for iControl = 1:length(controlGroups)
             options.interact = 'Stage, ADHS';
             options.constraint = 'Skating == yes & Stage ~= t3';
     end
-    
-
-    %% Analysis of Motor data
 
     optionsOrig = options;
     constraintOrig = options.constraint;
@@ -129,9 +130,9 @@ for iControl = 1:length(controlGroups)
 
 end
 
-return
-
 %% Analysis of Cognition data
+
+options.inFile = '../Skating_Out/All/CognitionTable.csv';
 
 metrics = {
     'D2_Completed'
@@ -141,11 +142,12 @@ metrics = {
     'Hyperactivity'
     };
 depVarUnitss = {
-    ''
-    ''
-    ''
-    ''
-    ''};
+    'Score'
+    'Score'
+    'Score'
+    'Score'
+    'Score'
+    };
 distributions = {
     'gamma'
     'gamma'
@@ -154,35 +156,54 @@ distributions = {
     'normal'
     };
 
-optionsOrig = options;
-if isfield(options, 'constraint')
-    constraintOrig = options.constraint;
-else
-    constraintOrig = '';
-end
-for iMetric = 1:length(metrics)
-    metric = metrics{iMetric};
-    options.y = metric;
-    if exist('distributions', 'var') && length(distributions) == 1
-        options.distribution = distributions{1};
-    elseif exist('distributions', 'var')
-        options.distribution = distributions{iMetric};
+for iControl = 1:length(controlGroups)
+    controlGroup = controlGroups{iControl};
+    switch controlGroup
+        case 'ADHS'
+            options.x = 'Stage, Skating, Medication';
+            options.within = 'Stage';
+            options.interact = 'Stage, Skating, Medication';
+            options.constraint = 'ADHS == yes & Stage ~= t3';
+        case 'Skating'
+            options.x = 'Stage, ADHS';
+            options.within = 'Stage';
+            options.interact = 'Stage, ADHS';
+            options.constraint = 'Skating == yes & Stage ~= t3';
     end
-    if exist('links', 'var') && length(links) == 1
-        options.link = links{1};
-    elseif exist('links', 'var')
-        options.link = links{iMetric};
+
+    optionsOrig = options;
+    if isfield(options, 'constraint')
+        constraintOrig = options.constraint;
+    else
+        constraintOrig = '';
     end
-    if exist('depVarUnitss', 'var') && length(depVarUnitss) == 1
-        options.yUnits = depVarUnitss{1};
-    elseif exist('depVarUnitss', 'var')
-        options.yUnits = lidepVarUnitssnks{iMetric};
-    end
-    for iTask = 1:length(tasks)
-        task = tasks{iTask};
-        options.inFile = '../Skating_Out/All/CognitionTable.csv';
-        options.outDir = sprintf('%s/Cognition/%s', resultsDir, metric);
+    for iMetric = 1:length(metrics)
+        metric = metrics{iMetric};
+        options.y = metric;
+        switch controlGroup
+            case 'ADHS'
+                depVar = sprintf('%s_ADHS', metric);
+            case 'Skating'
+                depVar = sprintf('%s_Skating', metric);
+        end
+        if exist('distributions', 'var') && length(distributions) == 1
+            options.distribution = distributions{1};
+        elseif exist('distributions', 'var')
+            options.distribution = distributions{iMetric};
+        end
+        if exist('links', 'var') && length(links) == 1
+            options.link = links{1};
+        elseif exist('links', 'var')
+            options.link = links{iMetric};
+        end
+        if exist('depVarUnitss', 'var') && length(depVarUnitss) == 1
+            options.yUnits = depVarUnitss{1};
+        elseif exist('depVarUnitss', 'var')
+            options.yUnits = depVarUnitss{iMetric};
+        end
+        options.outDir = sprintf('%s/Cognition/%s', resultsDir, depVar);
         kbstat(options);
         options = optionsOrig;
     end
+
 end
