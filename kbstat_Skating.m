@@ -76,9 +76,11 @@ for iControl = 1:length(controlGroups)
     controlGroup = controlGroups{iControl};
     switch controlGroup
         case 'ADHS'
-            options.x = 'Stage, Skating, Medication';
-            options.within = 'Stage';
-            options.interact = 'Stage, Skating, Medication';
+            % options.x = 'Stage, Skating, Medication';
+            % options.interact = 'Stage, Skating, Medication';
+            options.x = 'Stage, Skating';
+            options.interact = 'Stage, Skating';
+            options.within = 'Stage';            
             options.constraint = 'ADHS == yes & Stage ~= t3';
         case 'Skating'
             options.x = 'Stage, ADHS';
@@ -160,9 +162,11 @@ for iControl = 1:length(controlGroups)
     controlGroup = controlGroups{iControl};
     switch controlGroup
         case 'ADHS'
-            options.x = 'Stage, Skating, Medication';
-            options.within = 'Stage';
-            options.interact = 'Stage, Skating, Medication';
+            % options.x = 'Stage, Skating, Medication';
+            % options.interact = 'Stage, Skating, Medication';
+            options.x = 'Stage, Skating';
+            options.interact = 'Stage, Skating';
+            options.within = 'Stage';            
             options.constraint = 'ADHS == yes & Stage ~= t3';
         case 'Skating'
             options.x = 'Stage, ADHS';
