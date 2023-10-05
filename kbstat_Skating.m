@@ -40,47 +40,47 @@ resultsDir = '../Skating_Stats';
 %% Global options
 
 options = struct;
-options.posthocMethod = 'emm';
-options.removeOutliers = 'true';
-options.isRescale = true;
+options.plotStyle = 'violin';
+options.isRescale = 'true';
+
+options.separateMulti = 0;
+% options.transform = 'x/quantile(x, 0.95)';
+options.posthocMethod = 'utest';
+options.removeOutliers = 1;
+options.preRemoveOutliers = 1;
 
 controlGroups = {'ADHS', 'Skating'};
+checkMedication = 0;
 
 
 %% Analysis of Motor data
 
 options.inFile = '../Skating_Out/All/SkatingTable.csv';
 options.id = 'Subject';
+options.multiVar = 'MotorTask';
 
 metrics = {
     'TargetError'
     };
-tasks = {
-    'Balance'
-    'Sprung'
-    'Einbein'
-    };
 depVarUnitss = {
-    'm'
-    'm'
     'm'
     };
 distributions = {
     'gamma'
-    'gamma'
-    'gamma'
     };
-
 
 for iControl = 1:length(controlGroups)
     controlGroup = controlGroups{iControl};
     switch controlGroup
         case 'ADHS'
-            % options.x = 'Stage, Skating, Medication';
-            % options.interact = 'Stage, Skating, Medication';
-            options.x = 'Stage, Skating';
-            options.interact = 'Stage, Skating';
-            options.within = 'Stage';            
+            if checkMedication
+                options.x = 'Stage, Skating, Medication'; %#ok<*UNRCH>
+                options.interact = 'Stage, Skating, Medication';
+            else
+                options.x = 'Stage, Skating';
+                options.interact = 'Stage, Skating';
+            end
+            options.within = 'Stage';
             options.constraint = 'ADHS == yes & Stage ~= t3';
         case 'Skating'
             options.x = 'Stage, ADHS';
@@ -94,81 +94,77 @@ for iControl = 1:length(controlGroups)
     iDepVar = 0;
     for iMetric = 1:length(metrics)
         metric = metrics{iMetric};
-        for iTask = 1:length(tasks)
-            task = tasks{iTask};
-            iDepVar = iDepVar+1;
 
-            switch controlGroup
-                case 'ADHS'
-                    depVar = sprintf('%s_%s_ADHS', task, metric);
-                case 'Skating'
-                    depVar = sprintf('%s_%s_Skating', task, metric);
-            end
+        iDepVar = iDepVar+1;
+        options.y = metric;
 
-            options.y = metric;
-            options.constraint = sprintf('%s & MotorTask == %s', constraintOrig, task);
-            options.title = sprintf('%s', strrep(depVar, '_', ' '));
-            options.outDir = sprintf('%s/Motoric/%s', resultsDir, depVar);
-
-            if length(depVarUnitss) == 1
-                options.yUnits = depVarUnitss{1};
-            else
-                options.yUnits = depVarUnitss{iDepVar};
-            end
-            if exist('distributions', 'var') && length(distributions) == 1
-                options.distribution = distributions{1};
-            elseif exist('distributions', 'var')
-                options.distribution = distributions{iDepVar};
-            end
-            if exist('links', 'var') && length(links) == 1
-                options.link = links{1};
-            elseif exist('links', 'var')
-                options.link = links{iDepVar};
-            end
-            kbstat(options);
-            options = optionsOrig;
+        switch controlGroup
+            case 'ADHS'
+                depVar = sprintf('%s_ADHS', metric);
+                if length(metrics) > 1
+                    options.outDir = sprintf('%s/Motoric/%s/ADHS', resultsDir, metric);
+                else
+                    options.outDir = sprintf('%s/Motoric/ADHS', resultsDir);
+                end
+            case 'Skating'
+                depVar = sprintf('%s_Skating', metric);
+                if length(metrics) > 1
+                    options.outDir = sprintf('%s/Motoric/%s/Skating', resultsDir, metric);
+                else
+                    options.outDir = sprintf('%s/Motoric/Skating', resultsDir);
+                end
         end
-    end
 
+        % options.title = sprintf('%s', strrep(depVar, '_', ' '));
+
+        if length(depVarUnitss) == 1
+            options.yUnits = depVarUnitss{1};
+        else
+            options.yUnits = depVarUnitss{iDepVar};
+        end
+        if exist('distributions', 'var') && length(distributions) == 1
+            options.distribution = distributions{1};
+        elseif exist('distributions', 'var')
+            options.distribution = distributions{iDepVar};
+        end
+        if exist('links', 'var') && length(links) == 1
+            options.link = links{1};
+        elseif exist('links', 'var')
+            options.link = links{iDepVar};
+        end
+        kbstat(options);
+        options = optionsOrig;
+    end
 end
 
 %% Analysis of Cognition data
 
 options.inFile = '../Skating_Out/All/CognitionTable.csv';
 
-metrics = {
+options.y = {
     'D2_Completed'
     'D2_Concentration'
     'Stroop'
-    'AttentionDeficit'
-    'Hyperactivity'
     };
-depVarUnitss = {
-    'Score'
-    'Score'
-    'Score'
-    'Score'
-    'Score'
-    };
-distributions = {
-    'gamma'
-    'gamma'
-    'gamma'
-    'normal'
-    'normal'
-    };
+options.yUnits = 'Score';
+options.distribution = 'gamma';
 
 for iControl = 1:length(controlGroups)
     controlGroup = controlGroups{iControl};
     switch controlGroup
         case 'ADHS'
-            % options.x = 'Stage, Skating, Medication';
-            % options.interact = 'Stage, Skating, Medication';
-            options.x = 'Stage, Skating';
-            options.interact = 'Stage, Skating';
-            options.within = 'Stage';            
+            options.outDir = sprintf('%s/Cognition/ADHS', resultsDir);
+            if checkMedication
+                options.x = 'Stage, Skating, Medication';
+                options.interact = 'Stage, Skating, Medication';
+            else
+                options.x = 'Stage, Skating';
+                options.interact = 'Stage, Skating';
+            end
+            options.within = 'Stage';
             options.constraint = 'ADHS == yes & Stage ~= t3';
         case 'Skating'
+            options.outDir = sprintf('%s/Cognition/Skating', resultsDir);
             options.x = 'Stage, ADHS';
             options.within = 'Stage';
             options.interact = 'Stage, ADHS';
@@ -181,33 +177,51 @@ for iControl = 1:length(controlGroups)
     else
         constraintOrig = '';
     end
-    for iMetric = 1:length(metrics)
-        metric = metrics{iMetric};
-        options.y = metric;
-        switch controlGroup
-            case 'ADHS'
-                depVar = sprintf('%s_ADHS', metric);
-            case 'Skating'
-                depVar = sprintf('%s_Skating', metric);
-        end
-        if exist('distributions', 'var') && length(distributions) == 1
-            options.distribution = distributions{1};
-        elseif exist('distributions', 'var')
-            options.distribution = distributions{iMetric};
-        end
-        if exist('links', 'var') && length(links) == 1
-            options.link = links{1};
-        elseif exist('links', 'var')
-            options.link = links{iMetric};
-        end
-        if exist('depVarUnitss', 'var') && length(depVarUnitss) == 1
-            options.yUnits = depVarUnitss{1};
-        elseif exist('depVarUnitss', 'var')
-            options.yUnits = depVarUnitss{iMetric};
-        end
-        options.outDir = sprintf('%s/Cognition/%s', resultsDir, depVar);
-        kbstat(options);
-        options = optionsOrig;
+    kbstat(options);
+    options = optionsOrig;
+end
+
+%% Analysis of Symptomatics
+
+options.inFile = '../Skating_Out/All/CognitionTable.csv';
+
+options.y = {
+    'AttentionDeficit'
+    'Hyperactivity'
+    };
+options.yUnits = 'Score';
+options.distribution = 'normal';
+
+for iControl = 1:length(controlGroups)
+    controlGroup = controlGroups{iControl};
+    switch controlGroup
+        case 'ADHS'
+            options.outDir = sprintf('%s/Symptomatics/ADHS', resultsDir);
+            if checkMedication
+                options.x = 'Stage, Skating, Medication';
+                options.interact = 'Stage, Skating, Medication';
+            else
+                options.x = 'Stage, Skating';
+                options.interact = 'Stage, Skating';
+            end
+            options.within = 'Stage';
+            options.constraint = 'ADHS == yes & Stage ~= t3';
+        case 'Skating'
+            options.outDir = sprintf('%s/Symptomatics/Skating', resultsDir);
+            options.x = 'Stage, ADHS';
+            options.within = 'Stage';
+            options.interact = 'Stage, ADHS';
+            options.constraint = 'Skating == yes & Stage ~= t3';
     end
 
+    optionsOrig = options;
+    if isfield(options, 'constraint')
+        constraintOrig = options.constraint;
+    else
+        constraintOrig = '';
+    end    
+    kbstat(options);
+    options = optionsOrig;
 end
+
+
