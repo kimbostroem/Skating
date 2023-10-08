@@ -41,14 +41,16 @@ resultsDir = '../Skating_Stats';
 
 options = struct;
 options.plotStyle = 'violin';
-options.isRescale = 'true';
+options.isRescale = 1;
 options.separateMulti = 1;
 options.transform = 'q50';
-options.posthocMethod = 'utest';
+% options.fitMethod = 'none';
+% options.posthocMethod = 'utest';
+% options.posthocMain = 1;
 options.preRemoveOutliers = 1;
 options.removeOutliers = 1;
-controlGroups = {'ADHS', 'Skating'};
-checkMedication = 0;
+controlGroups = {'ADHS'};
+checkMedication = 0  ;
 
 %% Analysis of Motor data
 
