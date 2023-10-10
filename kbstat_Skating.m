@@ -43,12 +43,12 @@ options = struct;
 options.plotStyle = 'violin';
 options.isRescale = 1;
 options.separateMulti = 1;
-options.transform = 'q50';
-options.fitMethod = 'none';
-options.posthocMethod = 'utest';
+% options.transform = 'q50';
+options.fitMethod = 'REMPL';
+% options.posthocMethod = 'utest';
 options.outlierMethod = 'auto';
 options.removeOutliers = 'prepost';
-controlGroups = {'ADHS'};
+controlGroups = {'ADHS', 'Skating'};
 checkMedication = 0;
 
 %% Analysis of Motor data
