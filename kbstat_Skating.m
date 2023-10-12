@@ -48,6 +48,7 @@ options.fitMethod = 'REMPL';
 % options.posthocMethod = 'utest';
 options.outlierMethod = 'auto';
 options.removeOutliers = 'prepost';
+options.correctForN = 3;
 controlGroups = {'ADHS', 'Skating'};
 checkMedication = 0;
 
