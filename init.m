@@ -13,10 +13,10 @@ dataSet = 'All'; % PR, PB, PRCO, ProKo, All
 fprintf('Using dataset ''%s''...\n', dataSet);
 
 % set folders
-allDir = 'All';
-parentOutDir = '../Skating_Out';
+allDir = '.';
+parentOutDir = '../Data_Out';
 outDir = fullfile(parentOutDir, dataSet);
-inDir = '../Skating_In';
+inDir = '../Data_In';
 motorDir = fullfile(inDir, 'Motorisch', dataSet);
 cogDir = fullfile(inDir, 'Kognitiv');
 paramDir = fullfile(inDir, 'Parameter');
