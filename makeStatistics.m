@@ -48,7 +48,7 @@ options.markerSize = 4;
 %%-------------------------------------------------------------------------
 %% Hypothesis 1: ADHS effect
 
-hypoDir = 'H1 ADHS effect';
+hypoDir = 'H1 ADHS effect for Skating';
 
 options.constraint = 'Skating == yes & Stage ~= t3';
 options.x = 'ADHS, Stage';
@@ -64,9 +64,6 @@ options.multiVar = 'MotorTask';
 options.posthocMethod = 'emm';
 
 options.y = {
-    'TargetError'
-    };
-options.yLabel = {
     'TargetError'
     };
 options.yUnits = {
@@ -116,9 +113,9 @@ options.outDir = sprintf('%s/%s/Symptomatics', resultsDir, hypoDir);
 kbstat(options);
 
 %%-------------------------------------------------------------------------
-%% Hypothesis 2: Skating effect
+%% Hypothesis 2: Time effect
 
-hypoDir = 'H2 Skating effect';
+hypoDir = 'H2 Time effect for ADHS';
 
 options.constraint = 'Stage ~= t3 & ADHS == yes';
 options.x = 'Stage, Skating';
@@ -135,7 +132,70 @@ options.posthocMethod = 'emm';
 options.y = {
     'TargetError'
     };
-options.yLabel = {
+options.yUnits = {
+    'm'
+    };
+options.distribution = {
+    'gamma'
+    };
+options.outDir = sprintf('%s/%s/Motoric', resultsDir, hypoDir);
+kbstat(options);
+
+%% Cognition
+
+options.inFile = '../Data_Out/CognitionTable.csv';
+options.posthocMethod = 'emm';
+
+options.y = {
+    'D2_Completed'
+    'D2_Concentration'
+    'Stroop'
+    };
+options.yUnits = {
+    'Score'
+    };
+options.distribution = {
+    'normal'
+    };
+options.outDir = sprintf('%s/%s/Cognition', resultsDir, hypoDir);
+kbstat(options);
+
+%% Symptomatics
+
+options.inFile = '../Data_Out/CognitionTable.csv';
+options.posthocMethod = 'emm';
+
+options.y = {
+    'AttentionDeficit'
+    'Hyperactivity'
+    };
+options.yUnits = {
+    'Score'
+    };
+options.distribution = {
+    'normal'
+    };
+options.outDir = sprintf('%s/%s/Symptomatics', resultsDir, hypoDir);
+kbstat(options);
+
+%%-------------------------------------------------------------------------
+%% Hypothesis 3: Skating effect
+
+hypoDir = 'H3 Skating effect for ADHS at t2';
+
+options.constraint = 'Stage == t2 & ADHS == yes';
+options.x = 'Skating, Medication';
+options.within = '';
+options.interact = '';
+options.fitMethod = 'REMPL';
+
+%% Motor data
+
+options.inFile = '../Data_Out/SkatingTable.csv';
+options.multiVar = 'MotorTask';
+options.posthocMethod = 'emm';
+
+options.y = {
     'TargetError'
     };
 options.yUnits = {
@@ -150,7 +210,6 @@ kbstat(options);
 %% Cognition
 
 options.inFile = '../Data_Out/CognitionTable.csv';
-options.x = 'Stage, Skating, ADHS';
 options.posthocMethod = 'emm';
 
 options.y = {
