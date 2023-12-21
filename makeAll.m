@@ -1,9 +1,11 @@
+init;
+
 dataSets = {
-    'PR'
-    'PB'
-    'PRCO'
-    'ProKo'
-    'All'
+    % 'PR'
+    % 'PB'
+    % 'PRCO'
+    % 'ProKo'
+    '.'
     };
 
 for iData = 1:length(dataSets)
@@ -11,8 +13,8 @@ for iData = 1:length(dataSets)
     close all;
     dataSet = dataSets{iData};
 
-    % if dataSet is 'All' -> join dataSets and quit
-    if strcmp(dataSet, allDir)
+    % if dataSet is '.' -> join dataSets and quit
+    if length(dataSets) > 1 && strcmp(dataSet, allDir)
         diary(fullfile(outDir,'log.txt'));
         fprintf('Joining dataSets into ''%s''...\n', dataSet);
         joinData();
@@ -35,8 +37,8 @@ for iData = 1:length(dataSets)
 
     Measurements = loadState();
     makeSubjects;
-    makeMotorData;
-    makeMotorMetrics;
+    % makeMotorData;
+    % makeMotorMetrics;
     makeCognitionData;
     makeTables;
     saveState;
