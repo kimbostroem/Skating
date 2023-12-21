@@ -17,31 +17,31 @@ depVars = {'PathLength', 'TargetError', 'Jerk', 'JerkXY', 'JerkZ'};
 
 % clean table
 
-SourceTable = MotorMetrics;
 % remove empty "isValid" rows
-rows = isempty(SourceTable.isValid);
-SourceTable(rows, :) = [];
+rows = isempty(MotorMetrics.isValid);
+MotorMetrics(rows, :) = [];
 % remove rows where "isValid" equals zero
-rows = (SourceTable.isValid == 0);
-SourceTable(rows, :) = [];
-SourceTable = removevars(SourceTable, {'isValid'});
-MotorTable = SourceTable;
+rows = (MotorMetrics.isValid == 0);
+MotorMetrics(rows, :) = [];
+MotorMetrics = removevars(MotorMetrics, {'isValid'});
+MotorTable = MotorMetrics;
 % remove unnecessary variables
 rmVars = {'subjectCode', 'date', 'Beidbein_start', 'Beidbein_stop', 'Einbein_start', 'Einbein_stop'};
 myRmVars = intersect(MotorTable.Properties.VariableNames, rmVars);
 MotorTable = removevars(MotorTable, myRmVars);
 
-% replace missing height at some stage with mean of heights of all stages
 subjects = unique(Measurements.Subjects.Subject, 'stable');
 nSubjects = length(subjects);
 for iSubject = 1:nSubjects
-    subject = subjects{iSubject};
-    idx = find(MotorTable.Subject == string(subject));
+    subject = string(subjects{iSubject});
+
+    % replace missing height at some stage with mean of heights of all stages
+    idxSubject = find(MotorTable.Subject == subject);
     variable = 'Height';
     if ~ismember(variable, MotorTable.Properties.VariableNames)
         continue
     end
-    myCell = MotorTable{idx, variable};
+    myCell = MotorTable{idxSubject, variable};
     if iscell(myCell)
         idxNaN = cellfun(@(x) any(isempty(x)), myCell);
     else
@@ -49,9 +49,29 @@ for iSubject = 1:nSubjects
     end
     if any(idxNaN)
         fillValue = mean(cell2mat(myCell), 'omitnan');
-        for iIdx = 1:length(idx)
-            MotorTable.(variable){idx(iIdx)} = fillValue;
+        for iIdx = 1:length(idxSubject)
+            MotorTable.(variable){idxSubject(iIdx)} = fillValue;
         end
+    end
+
+    % Ensure that there are 4 months between the stages
+    % MotorTable
+    idxStage1 = (MotorTable.Subject == subject & MotorTable.Stage == 1);
+    idxStage2 = (MotorTable.Subject == subject & MotorTable.Stage == 2);
+    idxStage3 = (MotorTable.Subject == subject & MotorTable.Stage == 3);
+    age1 = MotorTable.Age(find(idxStage1, 1));
+    MotorTable.Age(idxStage2) = age1 + 4/12;
+    if any(idxStage3)
+        MotorTable.Age(idxStage3) = age1 + 2*4/12;
+    end
+    % MotorMetrics
+    idxStage1 = (MotorMetrics.Subject == subject & MotorMetrics.Stage == 1);
+    idxStage2 = (MotorMetrics.Subject == subject & MotorMetrics.Stage == 2);
+    idxStage3 = (MotorMetrics.Subject == subject & MotorMetrics.Stage == 3);
+    age1 = MotorMetrics.Age(find(idxStage1, 1));
+    MotorMetrics.Age(idxStage2) = age1 + 4/12;
+    if any(idxStage3)
+        MotorMetrics.Age(idxStage3) = age1 + 2*4/12;
     end
 end
 
@@ -62,16 +82,15 @@ Measurements.MotorTable = MotorTable;
 
 tasks = unique(MotorTable.Task, 'stable');
 stages = unique(MotorTable.Stage, 'stable');
-SourceTable = MotorTable;
 SkatingTable = struct([]);
 iRow = 1;
 newDepVars = {};
 for iSubject = 1:length(subjects)
     subject = subjects{iSubject};
-    subjectSourceTable = SourceTable(SourceTable.Subject == string(subject), :);
+    subjectMotorTable = MotorTable(MotorTable.Subject == string(subject), :);
     for iStage = 1:length(stages)
         stage = stages(iStage);
-        stageTable = subjectSourceTable(subjectSourceTable.Stage == stage, :);
+        stageTable = subjectMotorTable(subjectMotorTable.Stage == stage, :);
         if isempty(stageTable)
             continue
         end
@@ -129,12 +148,10 @@ cognitionVariables_clean = [
     "Intervention"
     "AD_MW"
     "Hyp_MW"
-    "D2_F__SW"
-    "D2_BZO_SW"
-    "D2_KL_SW"
-    "Stroop_FWL_SW"
-    "Stroop_FSB_SW"
-    "Stroop_INT_SW"
+    "D2_F_"
+    "D2_BZO"
+    "D2_KL"
+    "Stroop_INT_median"
     ];
 cognitionVariables = intersect(cognitionVariables_clean, cognitionVariables_orig, 'stable');
 CognitionTableClean = CognitionTable_orig(:, cognitionVariables);
@@ -143,12 +160,10 @@ CognitionTableClean = CognitionTable_orig(:, cognitionVariables);
 renameVariables_old = [
     "AD_MW"
     "Hyp_MW"
-    "D2_F__SW"
-    "D2_BZO_SW"
-    "D2_KL_SW"
-    "Stroop_FWL_SW"
-    "Stroop_FSB_SW"
-    "Stroop_INT_SW"
+    "D2_F_"
+    "D2_BZO"
+    "D2_KL"
+    "Stroop_INT_median"
     ];
 renameVariables_new = [
     "AttentionDeficit"
@@ -156,8 +171,6 @@ renameVariables_new = [
     "D2_Error"
     "D2_Completed"
     "D2_Concentration"
-    "ColorWord"
-    "ColorBar"
     "Stroop"
     ];
 CognitionTableClean = renamevars(CognitionTableClean, renameVariables_old, renameVariables_new);
@@ -175,7 +188,7 @@ subjectVariables_clean = [
     "ADHS"
     "Diagnose"
     "Sex"
-    "Age_yrs"
+    "Age"
     "Medication"
     "School"
     "Grade"
@@ -199,7 +212,15 @@ for iRow = 1:nRows
     for iVar = 1:length(variables)
         variable = variables{iVar};
         CognitionTable(iRow).(variable) = subjectData.(variable);
-    end    
+    end
+
+    % Age
+    stage = CognitionTableClean.Stage(iRow);
+    idxSubjectStage = find(MotorMetrics.Subject == subject & MotorMetrics.Stage == stage, 1, 'first');
+    CognitionTable(iRow).Height = MotorMetrics.Height(idxSubjectStage);
+    CognitionTable(iRow).Weight = MotorMetrics.Weight(idxSubjectStage);
+    CognitionTable(iRow).Age = MotorMetrics.Age(idxSubjectStage);
+
     % add cognition data
     cognitionData = CognitionTableClean(iRow, :);
     variables = cognitionData.Properties.VariableNames;
@@ -211,6 +232,18 @@ end
 
 % convert structure array to table
 CognitionTable = struct2table(CognitionTable);
+
+% rename table values
+variables = {'Skating', 'ADHS', 'Medication', 'Intervention'};
+for iVar = 1:length(variables)
+    variable = variables{iVar};
+    CognitionTable.(variable) = string(CognitionTable.(variable));
+    CognitionTable.(variable)(CognitionTable.(variable) == "1") = "yes";
+    CognitionTable.(variable)(CognitionTable.(variable) == "0") = "no";
+end
+CognitionTable.Stage = string(CognitionTable.Stage);
+CognitionTable.Stage = "t" + CognitionTable.Stage;
+
 % append table to Measurements structure
 Measurements.CognitionTable = CognitionTable;
 
@@ -251,6 +284,17 @@ end
 SkatingTable = struct2table(SkatingTable);
 % rename variables
 SkatingTable = renamevars(SkatingTable, 'Task', 'MotorTask');
+% rename table values
+variables = {'Skating', 'ADHS', 'Medication', 'Intervention'};
+for iVar = 1:length(variables)
+    variable = variables{iVar};
+    SkatingTable.(variable) = string(SkatingTable.(variable));
+    SkatingTable.(variable)(SkatingTable.(variable) == "1") = "yes";
+    SkatingTable.(variable)(SkatingTable.(variable) == "0") = "no";
+end
+SkatingTable.Stage = string(SkatingTable.Stage);
+SkatingTable.Stage = "t" + SkatingTable.Stage;
+
 % append table to Measurements structure
 Measurements.SkatingTable = SkatingTable;
 
@@ -280,29 +324,29 @@ for iSubject = 1:length(subjects)
 
         % init table row with subject data
         allVariables = {};
-        subjectSourceTable = table2struct(subjectSubjectTable);
-        newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
+        subjectMotorTable = table2struct(subjectSubjectTable);
+        newVariables = setdiff(fieldnames(subjectMotorTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectMotorTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
         end
 
         % append motor data
-        subjectSourceTable = table2struct(stageMotorTable);
-        newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
+        subjectMotorTable = table2struct(stageMotorTable);
+        newVariables = setdiff(fieldnames(subjectMotorTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectMotorTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
         end
 
         % append cognition data
-        subjectSourceTable = table2struct(stageCognitionTable);
-        newVariables = setdiff(fieldnames(subjectSourceTable), allVariables, 'stable');
+        subjectMotorTable = table2struct(stageCognitionTable);
+        newVariables = setdiff(fieldnames(subjectMotorTable), allVariables, 'stable');
         for iVar = 1:length(newVariables)
             variable = newVariables{iVar};
-            SkatingTable_subjectMean(iRow).(variable) = subjectSourceTable.(variable);
+            SkatingTable_subjectMean(iRow).(variable) = subjectMotorTable.(variable);
             allVariables = union(allVariables, {variable}, 'stable');
             % update list of dependent variables
             depVars = union(depVars, {variable}, 'stable');
