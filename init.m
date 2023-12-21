@@ -8,7 +8,7 @@ clear
 close all
 
 % which dataset to use (subfolder of outDir)
-dataSet = 'All'; % PR, PB, PRCO, ProKo, All
+dataSet = '.'; % PR, PB, PRCO, ProKo, .
 
 fprintf('Using dataset ''%s''...\n', dataSet);
 
